@@ -165,7 +165,7 @@ The English landing page lives in [`site/`](site/README.md), with interactive pa
 
 The renderer and desktop Cargo packages are named `luma` and `luma-desktop`. The `flux/` and `flux-desktop/` directories, the Rust dependency alias `flux`, and internal renderer names are retained to make comparison with upstream easier.
 
-`flux-wasm/`, `flux-gl/`, and `web/` contain the inherited web and OpenGL targets. Their full rebranding is still pending; the current development focus is the Windows desktop screensaver.
+`flux-wasm/`, `flux-gl/`, and `web/` contain the inherited web and OpenGL targets. Their public metadata and navigation point to Luma; internal module names retain the upstream naming. The published website lives in `site/`; `web/` is the legacy browser demo and is not deployed by the Pages workflow. Original Flux credits and license notices are preserved.
 
 ## Credits and license
 

@@ -15,9 +15,9 @@ description = "Luma Windows screensaver, based on Flux"
 edition = "2021"
 license = "MIT"
 license-file = "LICENSE"
-homepage = "https://github.com/Ken5998/luma"
+homepage = "https://luma.ksmvc.ch"
 repository = "https://github.com/Ken5998/luma"
-authors = ["Sander Melnikov <hey@sandydoo.me"]
+authors = ["Kenan Kasumović", "Sander Melnikov <hey@sandydoo.me>"]
 
 [workspace.dependencies.wgpu]
 version = "30.0"

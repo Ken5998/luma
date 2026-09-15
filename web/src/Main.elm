@@ -114,9 +114,9 @@ footerItems =
         [ HA.href "https://github.com/sandydoo/" ]
         [ Html.text "© 2026 Sander Melnikov" ]
     , Html.a
-        [ HA.href "https://x.com/sandydoo/" ]
-        [ Html.text "Follow me on X" ]
+        [ HA.href "https://github.com/Ken5998/luma" ]
+        [ Html.text "Luma source code" ]
     , Html.a
-        [ HA.href "https://sandydoo.gumroad.com/l/flux" ]
-        [ Html.text "Buy this screensaver" ]
+        [ HA.href "https://luma.ksmvc.ch" ]
+        [ Html.text "Get Luma for Windows" ]
     ]

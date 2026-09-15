@@ -1,6 +1,6 @@
 {
-  "name": "flux",
-  "description": "An open-source tribute to the macOS Drift screensaver that runs in the browser",
+  "name": "luma-web-demo",
+  "description": "Legacy browser demo for Luma, based on Flux",
   "version": "5.2.1",
   "author": "Sander Melnikov <hey@sandydoo.me>",
   "license": "MIT",
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/sandydoo/flux/web/"
+    "url": "https://github.com/Ken5998/luma/tree/main/web"
   },
   "overrides": {
     "elm": "npm:@lydell/elm@0.19.1-14"
