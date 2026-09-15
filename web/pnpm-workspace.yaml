@@ -1,3 +1,0 @@
-peerDependencyRules:
-  ignoreMissing:
-    - elm

@@ -1,13 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-  "flux",
-  "flux-desktop",
-  "flux-wasm",
-  "flux-gl/flux",
-  "flux-gl/flux-desktop",
-  "flux-gl/flux-wasm",
-]
+members = ["luma", "luma-desktop"]
 
 [workspace.package]
 version = "7.2.1"
@@ -30,9 +23,9 @@ version = "0.25"
 approx = "0.5.1"
 env_logger = "0.11"
 bytemuck = { version = "1.4", features = ["derive"] }
-flux = { package = "luma", path = "./flux" }
+luma = { path = "./luma" }
 futures = "0.3"
-getrandom = { version = "0.4", features = ["wasm_js"] }
+getrandom = "0.4"
 glam = "0.32"
 half = { version = "2", features = ["bytemuck"] }
 log = "0.4"
@@ -47,21 +40,6 @@ serde_json = "1"
 thiserror = "2"
 tokio = { version = "1.36.0", features = ["full"] }
 winit = "0.30"
-
-# wasm32
-console_error_panic_hook = "0.1"
-console_log = "1.0"
-gloo-utils = { version = "0.3", features = ["serde"] }
-js-sys = "0.3"
-# Match with Nix version
-wasm-bindgen = "=0.2.121"
-wasm-bindgen-futures = "0.4"
-web-sys = "0.3"
-
-# GL
-glow = "0.13"
-glutin = "0.32"
-glutin-winit = "0.5"
 
 # The unoptimized build is too slow
 [profile.dev.package.image]

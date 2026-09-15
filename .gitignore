@@ -1,12 +1,5 @@
-/drafts
-mutagen.*
+# Rust build output and local test artifacts
+/target/
 
-# Rust
-/target
-
-# Release
-/result*
-
-# Dev shell
-/.direnv
+# Download populated by the Pages workflow or local packaging
 /site/downloads/
