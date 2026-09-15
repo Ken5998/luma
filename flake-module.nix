@@ -60,7 +60,7 @@
         pname = "flux-desktop";
         src = fileSetForCrate ./flux-desktop;
         release = true;
-        cargoExtraArgs = "-p flux-desktop";
+        cargoExtraArgs = "-p luma-desktop";
       });
 
       desktopRuntimeLibraries = lib.optionals stdenv.hostPlatform.isLinux (
@@ -92,7 +92,7 @@
       flux = craneLib.buildPackage (individualCrateArgs // {
         pname = "flux";
         src = fileSetForCrate ./flux;
-        cargoExtraArgs = "-p flux";
+        cargoExtraArgs = "-p luma";
       });
 
       flux-desktop =
@@ -104,8 +104,8 @@
           nativeBuildInputs = [pkgs.makeWrapper];
           buildCommand = ''
             mkdir -p $out/bin
-            cp ${flux-desktop-unwrapped}/bin/flux-desktop $out/bin
-            wrapProgram $out/bin/flux-desktop \
+            cp ${flux-desktop-unwrapped}/bin/Luma $out/bin
+            wrapProgram $out/bin/Luma \
               --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath desktopRuntimeLibraries}
           '';
           passthru.unwrapped = flux-desktop-unwrapped;

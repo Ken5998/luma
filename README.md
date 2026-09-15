@@ -1,108 +1,60 @@
-<p align="center">
-  <a href="https://flux.sandydoo.me/">
-    <img width="100%" src="https://assets.sandydoo.me/flux/social-header-2022-07-07.webp" alt="Flux" />
-  </a>
+![Luma — Windows screensaver](docs/luma-banner.svg)
 
-  <p align="center"><b>A open-source tribute to the macOS Drift screensaver.</b></p>
+# Luma
 
-  <p align="center">
-    <a href="https://sandydoo.gumroad.com/l/flux">Buy&nbsp;a&nbsp;screensaver</a>
-    &nbsp;·&nbsp;
-    <a href="https://flux.sandydoo.me/">Launch&nbsp;in&nbsp;browser</a>
-    &nbsp;·&nbsp;
-    <a href="https://www.youtube.com/watch?v=dURktAeZDa8">Watch&nbsp;recording</a>
-    &nbsp;·&nbsp;
-    <a href="https://x.com/sandydoo/">Follow&nbsp;me&nbsp;on&nbsp;X</a>
-  </p>
-</p>
+Screensaver per Windows basato su [Flux di Sander Melnikov](https://github.com/sandydoo/flux), ispirato a Drift di macOS.
 
-<br>
+## Stato del prototipo
 
+- Applicazione desktop con titolo ed eseguibile Luma.
+- Modalità screensaver `/s`: schermo intero sul monitor principale, cursore nascosto.
+- Uscita con un tasto, clic, rotella o movimento del mouse (soglia di 8 pixel logici, con due secondi di tolleranza per mouse e tastiera dopo il primo frame).
+- `/c` mostra un messaggio informativo; `/p` termina senza aprire finestre. Impostazioni e anteprima integrata non sono ancora implementate.
+- Prossimi passi: multimonitor, anteprima Windows, preferenze persistenti, icona e installer.
 
-## Screensavers
+## Compilare su Windows
 
-#### [Buy Flux as a Windows screensaver →][store]
-Help support development by letting your PC idle with style.
+Prerequisiti: Rust stable tramite rustup, Visual Studio Build Tools con strumenti C++ x64 e Windows SDK.
 
-## Backstory
+Dalla radice del repository, in PowerShell:
 
-I’ve been enamoured with the Drift screensaver ever since it came out with macOS Catalina. It’s mesmerizing. I feel like it’s become an instant classic, and, dare I say, it might stand to dethrone the venerable Flurry screensaver. Hats off to the folk at Apple responsible for this gem 🙌.
-
-This is an attempt at capturing that magic and bottling it up in a more portable vessel. This isn’t a port though; the source code for the original is locked up in a spaceship somewhere in Cupertino. Instead, consider this a delicate blend of detective work and artistic liberty.
-
-## Reviews
-
-> “You’re the first person I’ve seen take this much of an interest in how we made Drift and it looks like you nailed it… minus maybe one or two little elements that give it some extra magic 😉 Great work!”
-> — anonymous Apple employee
-
-## Samples
-
-![A render of Flux in all 4 default color schemes](https://assets.sandydoo.me/flux/samples/flux-all-at-1280-800-logical.webp)
-
-![A render of Flux in the “Original” color scheme](https://assets.sandydoo.me/flux/samples/flux-original-at-1280-800-logical.webp)
-
-![A render of Flux in the “Plasma” color scheme](https://assets.sandydoo.me/flux/samples/flux-plasma-at-1280-800-logical.webp)
-
-![A render of Flux in the “Poolside” color scheme](https://assets.sandydoo.me/flux/samples/flux-poolside-at-1280-800-logical.webp)
-
-![A render of Flux in the “Freedom” color scheme](https://assets.sandydoo.me/flux/samples/flux-freedom-at-1280-800-logical.webp)
-
-## Build
-
-### Using Nix
-
-Build a new release in the `result` folder:
-
-```sh
-nix build
+```powershell
+.\scripts\build-windows.ps1
 ```
 
-Or open a development shell with all the neccessary tools:
+Produce `target\release\Luma.exe` e `target\release\Luma.scr`, insieme alla licenza. La prima build richiede accesso a crates.io.
 
-```sh
-nix develop
+## Provare Luma
 
-cd web
-pnpm serve
+```powershell
+# Prototipo in finestra
+.\target\release\Luma.exe
+
+# Screensaver a schermo intero
+.\scripts\run-screensaver.ps1
+
+# Prototipo in finestra anche dal file .scr
+.\scripts\run-screensaver.ps1 -Windowed
 ```
 
-### Manual build
+Un `.scr` senza argomenti mostra il messaggio delle impostazioni. Questa versione non include ancora un installer.
 
-There’s a few things you’re going to have to install.
+## Test
 
-- rustc with `wasm32-unknown-unknown` as a target
-- cargo
-- wasm-pack
-- node
-- pnpm
-- elm
-
-How you get these dependencies depends on the operating system you’re running. Here’s an example for macOS and Linux using rustup:
-
-```sh
-rustup toolchain install stable
-rustup target wasm32-unknown-unknown
-
-cd web
-pnpm install
+```powershell
+cargo test --locked --release -p luma -p luma-desktop
 ```
 
-Run a development server from the `web` folder:
-```sh
-pnpm serve
-```
+I test che richiedono una GPU sono esclusi per default. Per eseguirli aggiungere `-- --ignored --test-threads=1`.
 
-Build a release:
-```sh
-pnpm build
-```
+## Struttura e origine
 
-## License
+I pacchetti del motore e del desktop si chiamano `luma` e `luma-desktop`. Le cartelle `flux/` e `flux-desktop/`, l'alias Rust `flux` e i nomi interni del motore sono mantenuti per facilitare il confronto con upstream. `flux-wasm/`, `flux-gl/` e `web/` contengono i target web e OpenGL ereditati, il cui rebranding completo resta da fare.
 
-[MIT][license-url] © [Sander Melnikov][maintainer-url].
+## Crediti e licenza
 
+Luma è un fork indipendente di Flux, © 2021 Sander Melnikov, distribuito con [licenza MIT](LICENSE). Il rendering originale e i relativi crediti restano attribuiti al progetto Flux. Il banner Luma è un nuovo asset SVG del fork.
 
-[license-url]: https://github.com/sandydoo/flux/blob/main/LICENSE
-[maintainer-url]: https://github.com/sandydoo/
-[x]: https://x.com/sandydoo/
-[store]: https://sandydoo.gumroad.com/l/flux
+## Diagnostica
+
+Luma scrive il log di avvio e il motivo delle uscite da input in `target\release\Luma.log`. Il file viene riscritto ad ogni avvio. La perdita di focus non chiude lo screensaver.

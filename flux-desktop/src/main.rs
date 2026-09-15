@@ -1,7 +1,9 @@
 // Disable the console window that pops up when you launch the .exe
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod screensaver;
 use image::RgbaImage;
+use screensaver::{Mode, MouseExit};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 
@@ -10,7 +12,7 @@ use winit::{
     event::{ElementState, KeyEvent, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
-    window::{Window, WindowId},
+    window::{Fullscreen, Window, WindowId},
 };
 
 #[cfg(target_os = "macos")]
@@ -117,16 +119,47 @@ impl GpuState {
     }
 }
 
-struct FluxApp {
+struct LumaApp {
+    mode: Mode,
+    mouse_exit: MouseExit,
     runtime: tokio::runtime::Runtime,
     window: Option<Arc<Window>>,
     gpu: Option<GpuState>,
     app: Option<App>,
     start: std::time::Instant,
+    first_frame: Option<std::time::Instant>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    let mut logger =
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"));
+    if let Ok(path) = std::env::current_exe() {
+        if let Ok(file) = std::fs::File::create(path.with_file_name("Luma.log")) {
+            logger.target(env_logger::Target::Pipe(Box::new(file)));
+        }
+    }
+    logger.init();
+    std::panic::set_hook(Box::new(|info| log::error!("Fatal error: {info}")));
+
+    let is_scr = std::env::current_exe()?
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("scr"));
+    let mode = match Mode::parse(&std::env::args().skip(1).collect::<Vec<_>>(), is_scr) {
+        Ok(mode) => mode,
+        Err(message) => {
+            screensaver::show_message(message);
+            return Ok(());
+        }
+    };
+    match mode {
+        Mode::Configure => {
+            screensaver::show_message("Luma — prototipo screensaver\n\nLe impostazioni saranno disponibili in una prossima versione.\nPer provare lo screensaver avvia Luma.scr /s.\n\nBasato su Flux di Sander Melnikov (MIT).");
+            return Ok(());
+        }
+        Mode::Preview => return Ok(()), // Embedded preview is the next milestone.
+        _ => {}
+    }
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(1)
@@ -137,19 +170,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
 
-    let mut flux_app = FluxApp {
+    let mut luma_app = LumaApp {
+        mode,
+        mouse_exit: MouseExit::default(),
         runtime,
         window: None,
         gpu: None,
         app: None,
         start: std::time::Instant::now(),
+        first_frame: None,
     };
 
-    event_loop.run_app(&mut flux_app)?;
+    event_loop.run_app(&mut luma_app)?;
     Ok(())
 }
 
-impl ApplicationHandler for FluxApp {
+impl ApplicationHandler for LumaApp {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_some() {
             return;
@@ -159,7 +195,8 @@ impl ApplicationHandler for FluxApp {
 
         #[cfg(target_os = "macos")]
         let window_attributes = Window::default_attributes()
-            .with_title("Flux")
+            .with_title("Luma")
+            .with_visible(false)
             .with_decorations(true)
             .with_resizable(true)
             .with_inner_size(logical_size)
@@ -169,12 +206,24 @@ impl ApplicationHandler for FluxApp {
 
         #[cfg(not(target_os = "macos"))]
         let window_attributes = Window::default_attributes()
-            .with_title("Flux")
+            .with_title("Luma")
+            .with_visible(false)
             .with_decorations(true)
             .with_resizable(true)
             .with_inner_size(logical_size);
 
+        let window_attributes = if self.mode == Mode::Saver {
+            window_attributes
+                .with_decorations(false)
+                .with_resizable(false)
+                .with_fullscreen(Some(Fullscreen::Borderless(event_loop.primary_monitor())))
+        } else {
+            window_attributes
+        };
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
+        if self.mode == Mode::Saver {
+            window.set_cursor_visible(false);
+        }
 
         let wgpu_instance = wgpu::Instance::default();
         let window_surface = wgpu_instance.create_surface(window.clone()).unwrap();
@@ -266,8 +315,6 @@ impl ApplicationHandler for FluxApp {
         )
         .unwrap();
 
-        window.set_visible(true);
-
         let (tx, rx) = mpsc::channel(32);
 
         // Take the runtime out temporarily to create the App
@@ -297,6 +344,8 @@ impl ApplicationHandler for FluxApp {
             scale_factor,
         });
 
+        window.set_visible(true);
+        window.request_redraw();
         self.window = Some(window);
         self.start = std::time::Instant::now();
     }
@@ -317,11 +366,40 @@ impl ApplicationHandler for FluxApp {
             return;
         }
 
+        if self.mode == Mode::Saver {
+            let armed = screensaver::input_armed(self.first_frame.map(|frame| frame.elapsed()));
+            let exit = match &event {
+                WindowEvent::KeyboardInput {
+                    event,
+                    is_synthetic: false,
+                    ..
+                } => armed && !event.repeat && event.state == ElementState::Pressed,
+                WindowEvent::MouseInput {
+                    state: ElementState::Pressed,
+                    ..
+                }
+                | WindowEvent::MouseWheel { .. } => armed,
+                WindowEvent::CursorMoved { position, .. } => self.mouse_exit.moved(
+                    self.first_frame
+                        .map(|frame| frame.elapsed())
+                        .unwrap_or_default(),
+                    position.x / window.scale_factor(),
+                    position.y / window.scale_factor(),
+                ),
+
+                _ => false,
+            };
+            if exit {
+                log::info!("Screensaver exit requested by input: {event:?}");
+                event_loop.exit();
+                return;
+            }
+        }
         app.handle_pending_messages(&gpu.device, &gpu.command_queue);
 
         match event {
-            WindowEvent::CloseRequested
-            | WindowEvent::KeyboardInput {
+            WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {
                         physical_key: PhysicalKey::Code(KeyCode::Escape),
@@ -329,7 +407,7 @@ impl ApplicationHandler for FluxApp {
                         ..
                     },
                 ..
-            } => event_loop.exit(),
+            } if self.mode == Mode::Desktop => event_loop.exit(),
             WindowEvent::DroppedFile(path) => {
                 let bytes = std::fs::read(path).unwrap();
                 app.decode_image(bytes);
@@ -386,6 +464,10 @@ impl ApplicationHandler for FluxApp {
                 gpu.command_queue.submit(Some(encoder.finish()));
                 window.pre_present_notify();
                 gpu.command_queue.present(frame);
+                if self.first_frame.is_none() {
+                    self.first_frame = Some(std::time::Instant::now());
+                    log::info!("First frame presented; mouse exit arms in two seconds");
+                }
             }
             _ => (),
         }

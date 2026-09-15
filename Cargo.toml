@@ -11,12 +11,12 @@ members = [
 
 [workspace.package]
 version = "7.2.1"
-description = "An open-source tribute to the macOS Drift screensaver"
+description = "Luma Windows screensaver, based on Flux"
 edition = "2021"
 license = "MIT"
 license-file = "LICENSE"
-homepage = "https://flux.sandydoo.me"
-repository = "https://github.com/sandydoo/flux/"
+homepage = "https://github.com/Ken5998/luma"
+repository = "https://github.com/Ken5998/luma"
 authors = ["Sander Melnikov <hey@sandydoo.me"]
 
 [workspace.dependencies.wgpu]
@@ -30,7 +30,7 @@ version = "0.25"
 approx = "0.5.1"
 env_logger = "0.11"
 bytemuck = { version = "1.4", features = ["derive"] }
-flux = { path = "./flux" }
+flux = { package = "luma", path = "./flux" }
 futures = "0.3"
 getrandom = { version = "0.4", features = ["wasm_js"] }
 glam = "0.32"

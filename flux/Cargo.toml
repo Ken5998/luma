@@ -1,5 +1,5 @@
 [package]
-name = "flux"
+name = "luma"
 version.workspace = true
 description.workspace = true
 authors.workspace = true

@@ -821,44 +821,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "flux"
-version = "7.2.1"
-dependencies = [
- "approx",
- "bytemuck",
- "getrandom 0.4.3",
- "glam",
- "half",
- "image",
- "log",
- "pollster",
- "rand 0.10.2",
- "rand_pcg",
- "rand_seeder",
- "rustc-hash 2.1.2",
- "serde",
- "thiserror 2.0.18",
- "wgpu",
-]
-
-[[package]]
-name = "flux-desktop"
-version = "7.2.1"
-dependencies = [
- "env_logger",
- "flux",
- "futures",
- "image",
- "log",
- "pollster",
- "raw-window-handle",
- "serde_json",
- "tokio",
- "wgpu",
- "winit",
-]
-
-[[package]]
 name = "flux-gl"
 version = "4.6.0"
 dependencies = [
@@ -916,11 +878,11 @@ version = "7.2.1"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
- "flux",
  "gloo-utils",
  "image",
  "js-sys",
  "log",
+ "luma",
  "serde",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -1562,6 +1524,45 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fae87c125b03c1d2c0150c90365d7d6bcc53fb73a9acaef207d2d065860f062"
 dependencies = [
  "imgref",
+]
+
+[[package]]
+name = "luma"
+version = "7.2.1"
+dependencies = [
+ "approx",
+ "bytemuck",
+ "getrandom 0.4.3",
+ "glam",
+ "half",
+ "image",
+ "log",
+ "pollster",
+ "rand 0.10.2",
+ "rand_pcg",
+ "rand_seeder",
+ "rustc-hash 2.1.2",
+ "serde",
+ "thiserror 2.0.18",
+ "wgpu",
+]
+
+[[package]]
+name = "luma-desktop"
+version = "7.2.1"
+dependencies = [
+ "env_logger",
+ "futures",
+ "image",
+ "log",
+ "luma",
+ "pollster",
+ "raw-window-handle",
+ "serde_json",
+ "tokio",
+ "wgpu",
+ "windows-sys 0.61.2",
+ "winit",
 ]
 
 [[package]]
