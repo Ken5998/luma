@@ -3,7 +3,7 @@ resolver = "2"
 members = ["luma", "luma-desktop"]
 
 [workspace.package]
-version = "7.2.1"
+version = "0.1.0"
 description = "Luma Windows screensaver, based on Flux"
 edition = "2021"
 license = "MIT"

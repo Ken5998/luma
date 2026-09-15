@@ -6,6 +6,8 @@ A Windows screensaver with flowing, GPU-rendered light. Based on [Flux by Sander
 
 Luma is an independent MIT-licensed fork, currently under development.
 
+[Website](https://luma.ksmvc.ch) · [Releases](https://github.com/Ken5998/luma/releases)
+
 ## Features
 
 - Fullscreen animation on each display connected at startup.
@@ -19,6 +21,13 @@ Luma is an independent MIT-licensed fork, currently under development.
 
 ## Install, update, or uninstall
 
+Release packages offer two options:
+
+- **`Luma-<version>-Setup-x64.exe`**: a graphical installer for the current user, with an entry in Windows Installed Apps. No administrator rights are needed.
+- **`Luma-<version>-windows-x64.zip`**: the screensaver with PowerShell install/uninstall scripts.
+
+Both use `%LOCALAPPDATA%\Luma\Screensaver` and preserve appearance preferences. Close Luma and Windows Screen Saver Settings before installing or updating. The graphical installer also supports upgrades from the script-based installation. If you installed with Setup, uninstall from Windows Installed Apps or run `Uninstall.cmd` to open the registered uninstaller.
+
 Extract the Windows ZIP, close Luma and Windows Screen Saver Settings, then double-click **Install.cmd**. It installs for the current user in `%LOCALAPPDATA%\Luma\Screensaver`, selects Luma, and opens Windows Screen Saver Settings. Check the wait time and sign-in preference, then click Apply. No administrator rights are needed.
 
 Run Install.cmd from a newer extracted package to update. Existing appearance preferences are kept. If the executable is in use, close the screensaver, preview, and settings window, then retry.
@@ -27,7 +36,7 @@ To uninstall, run **Uninstall.cmd** from the package or installation folder. It 
 
 The scripts change only the current user's screensaver executable selection. They do not change activation, idle timeout, or password requirements. Windows applies the executable selection on its next screensaver launch ([Microsoft documentation](https://learn.microsoft.com/en-us/windows/win32/devnotes/scrnsave-exe)). Organization policies may override the selection.
 
-Previously installed manual copies are not removed. The per-user copy becomes the selected screensaver. Packages and scripts are currently unsigned; this milestone provides a script-based installer, not an MSI or setup executable.
+Previously installed manual copies are not removed. The per-user copy becomes the selected screensaver. Packages and scripts are currently unsigned.
 
 ## Build
 
@@ -48,6 +57,14 @@ The script produces `target\release\Luma.exe` and `target\release\Luma.scr`, and
 ```
 
 Produces `target\distribution\Luma-windows-x64.zip` and its SHA-256 checksum. The ZIP includes the screensaver, installer, uninstaller, instructions, license, and checksums for its files. It uses the freshly built executable, even if an older development `.scr` is locked by Windows.
+
+For versioned release assets, install Inno Setup 6.7+ and run:
+
+```powershell
+.\scripts\package-release.ps1 -IsccPath 'C:\path\to\ISCC.exe'
+```
+
+This creates the Setup executable, ZIP, and `SHA256SUMS.txt` under `target\releases\<version>`. Luma starts its own release numbering at v0.1.0, independent of the inherited Flux version.
 
 ### Deployment tests
 
@@ -155,7 +172,7 @@ Losing focus does not close the screensaver.
 - Custom icon and a signed graphical installer.
 - Performance tuning for multiple high-resolution displays. Each display currently owns a separate simulation and GPU context; scenes do not span display boundaries.
 
-The per-user script installer is available; a signed installer and release publishing are still pending.
+Both graphical and script-based per-user installers are available. Code signing is still pending.
 
 ## Website
 
