@@ -15,6 +15,18 @@ Luma is an independent MIT-licensed fork, currently under development.
 - A two-second input grace period after each window's first frame prevents accidental startup exits. Keyboard auto-repeat is ignored; mouse movement uses an 8-logical-pixel threshold.
 - A windowed desktop mode for development and testing.
 
+## Install, update, or uninstall
+
+Extract the Windows ZIP, close Luma and Windows Screen Saver Settings, then double-click **Install.cmd**. It installs for the current user in `%LOCALAPPDATA%\Luma\Screensaver`, selects Luma, and opens Windows Screen Saver Settings. Check the wait time and sign-in preference, then click Apply. No administrator rights are needed.
+
+Run Install.cmd from a newer extracted package to update. Existing appearance preferences are kept. If the executable is in use, close the screensaver, preview, and settings window, then retry.
+
+To uninstall, run **Uninstall.cmd** from the package or installation folder. It restores the previous screensaver if that file still exists and Luma is still selected. A newer screensaver choice is left unchanged. `%LOCALAPPDATA%\Luma\settings.json` is preserved.
+
+The scripts change only the current user's screensaver executable selection. They do not change activation, idle timeout, or password requirements. Windows applies the executable selection on its next screensaver launch ([Microsoft documentation](https://learn.microsoft.com/en-us/windows/win32/devnotes/scrnsave-exe)). Organization policies may override the selection.
+
+Previously installed manual copies are not removed. The per-user copy becomes the selected screensaver. Packages and scripts are currently unsigned; this milestone provides a script-based installer, not an MSI or setup executable.
+
 ## Build
 
 Requires Windows, a stable Rust toolchain installed with rustup, and Visual Studio Build Tools with the C++ x64 tools and Windows SDK.
@@ -26,6 +38,22 @@ Run from the repository root in PowerShell:
 ```
 
 The script produces `target\release\Luma.exe` and `target\release\Luma.scr`, and copies the MIT license alongside them. The first build needs access to crates.io.
+
+### Create a distributable package
+
+```powershell
+.\scripts\package-windows.ps1
+```
+
+Produces `target\distribution\Luma-windows-x64.zip` and its SHA-256 checksum. The ZIP includes the screensaver, installer, uninstaller, instructions, license, and checksums for its files. It uses the freshly built executable, even if an older development `.scr` is locked by Windows.
+
+### Deployment tests
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-deployment.ps1
+```
+
+Tests installation, replacement, locked files, restoring the original selection, preserving a newer selection, and keeping preferences. They use disposable repository folders and a simulated registry boundary; they do not change the selected Windows screensaver. Registry integration and the Windows settings panel should be checked on an actual installation.
 
 ## Run
 
@@ -71,7 +99,7 @@ Preferences apply when a new desktop, screensaver, or preview instance starts. A
 
 The Windows Forms settings panel is embedded in the executable and uses the Windows PowerShell included with Windows. No companion script needs to be installed. A system policy that blocks PowerShell can prevent the settings window from opening.
 
-When updating an installed screensaver, replace the installed `Luma.scr` with the newly built file. Rebuilding this repository does not update copies installed elsewhere.
+Update managed installations by running Install.cmd from the new package. Manual installations still require replacing their `.scr` file. Rebuilding this repository does not update installed copies.
 
 ## Tests
 
@@ -120,10 +148,10 @@ Losing focus does not close the screensaver.
 ## Roadmap and current limits
 
 - Display hot-plug handling; restart Luma after connecting or disconnecting a monitor.
-- Custom icon, installer, and uninstall support.
+- Custom icon and a signed graphical installer.
 - Performance tuning for multiple high-resolution displays. Each display currently owns a separate simulation and GPU context; scenes do not span display boundaries.
 
-This prototype does not yet include an installer.
+The per-user script installer is available; a signed installer and release publishing are still pending.
 
 ## Repository structure
 

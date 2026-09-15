@@ -13,7 +13,13 @@ try {
     $metadata = & $cargo metadata --locked --no-deps --format-version 1 | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) { throw 'Failed to read Cargo metadata.' }
     $release = Join-Path $metadata.target_directory 'release'
-    Copy-Item -LiteralPath (Join-Path $release 'Luma.exe') -Destination (Join-Path $release 'Luma.scr')
+    $scrUpdated = $false
+    try {
+        Copy-Item -LiteralPath (Join-Path $release 'Luma.exe') -Destination (Join-Path $release 'Luma.scr')
+        $scrUpdated = $true
+    } catch {
+        Write-Warning 'Luma.exe was built, but Luma.scr could not be replaced. Close the screensaver and Windows preview, then rebuild; or run scripts\package-windows.ps1 for a fresh install package.'
+    }
     Copy-Item -LiteralPath (Join-Path $repo 'LICENSE') -Destination (Join-Path $release 'LICENSE')
-    Write-Host "Ready: $(Join-Path $release 'Luma.scr')"
+    if ($scrUpdated) { Write-Host "Ready: $(Join-Path $release 'Luma.scr')" }
 } finally { Pop-Location }
