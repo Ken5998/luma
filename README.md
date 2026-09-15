@@ -10,6 +10,8 @@ Luma is an independent MIT-licensed fork, currently under development.
 
 - Fullscreen animation on each display connected at startup.
 - Independent scenes with per-monitor resolution and DPI scaling.
+- Five color palettes, including Aurora: teal, violet, and pink inspired by northern lights.
+- An optional local-time clock, centered at the top of a chosen display.
 - Hidden cursor in screensaver mode.
 - Exit all screens with a key press, mouse click, scroll, or mouse movement.
 - A two-second input grace period after each window's first frame prevents accidental startup exits. Keyboard auto-repeat is ignored; mouse movement uses an 8-logical-pixel threshold.
@@ -88,10 +90,12 @@ Open **Settings** in Windows Screen Saver Settings, or run:
 .\target\release\Luma.exe /c
 ```
 
-- **Color palette:** Original, Plasma, Poolside, or Freedom.
+- **Color palette:** Original, Plasma, Poolside, Freedom, or Aurora.
 - **Animation speed:** 50–200% of the default speed.
 - **Line size:** 50–200%, independent of display DPI.
 - **Simulation quality:** Low, Balanced (default), or High. Higher quality uses more GPU resources on each display.
+- **Show clock:** Off by default; displays local time in 24-hour format at the top center.
+- **Clock display:** Primary display or a specific monitor. If that monitor is unavailable, the clock falls back to the primary display. Windowed mode and the Windows preview show the clock when enabled.
 
 **Save** writes preferences to `%LOCALAPPDATA%\Luma\settings.json`. **Cancel** leaves the file unchanged. **Restore defaults** resets the controls; use Save to keep those values.
 
@@ -152,6 +156,10 @@ Losing focus does not close the screensaver.
 - Performance tuning for multiple high-resolution displays. Each display currently owns a separate simulation and GPU context; scenes do not span display boundaries.
 
 The per-user script installer is available; a signed installer and release publishing are still pending.
+
+## Website
+
+The English landing page lives in [`site/`](site/README.md), with interactive palette illustrations and an optional clock preview. The GitHub Actions workflow builds and tests the Windows package, then publishes the site and download together through GitHub Pages. See the [deployment instructions](site/README.md) for the custom domain `luma.ksmvc.ch`.
 
 ## Repository structure
 

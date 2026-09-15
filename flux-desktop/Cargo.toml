@@ -14,6 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 env_logger.workspace = true
+bytemuck.workspace = true
 flux.workspace = true
 futures.workspace = true
 image.workspace = true
@@ -27,4 +28,4 @@ wgpu.workspace = true
 winit.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61.2", features = ["Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_SystemInformation"] }

@@ -1,6 +1,7 @@
 // Disable the console window that pops up when you launch the .exe
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod clock_overlay;
 mod preferences;
 mod screensaver;
 use image::RgbaImage;
@@ -132,6 +133,7 @@ struct LumaApp {
     app: Option<App>,
     start: std::time::Instant,
     first_frame: Option<std::time::Instant>,
+    clock: Option<clock_overlay::Clock>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -204,7 +206,16 @@ impl ApplicationHandler for MultiMonitorApp {
         log::info!("Starting {:?} on {} display(s)", self.mode, monitors.len());
         let preferences = preferences::load();
         log::info!("Loaded preferences: {preferences:?}");
+        let clock_monitor = monitors
+            .iter()
+            .flatten()
+            .find(|monitor| monitor.name().as_deref() == Some(preferences.clock_monitor.as_str()))
+            .cloned()
+            .or_else(|| event_loop.primary_monitor());
         for monitor in monitors {
+            let mut display_preferences = preferences.clone();
+            display_preferences.clock_enabled &=
+                self.mode != Mode::Saver || monitor == clock_monitor;
             if let Some(monitor) = &monitor {
                 log::info!(
                     "Display {:?}: position={:?}, size={:?}, scale={}",
@@ -217,7 +228,7 @@ impl ApplicationHandler for MultiMonitorApp {
             let mut display = LumaApp {
                 mode: self.mode,
                 monitor,
-                preferences: preferences.clone(),
+                preferences: display_preferences,
                 mouse_exit: MouseExit::default(),
                 runtime: tokio::runtime::Builder::new_multi_thread()
                     .worker_threads(1)
@@ -229,6 +240,7 @@ impl ApplicationHandler for MultiMonitorApp {
                 app: None,
                 start: std::time::Instant::now(),
                 first_frame: None,
+                clock: None,
             };
             display.resumed(event_loop);
             self.displays.push(display);
@@ -423,6 +435,13 @@ impl ApplicationHandler for LumaApp {
         if size.is_some() {
             window_surface.configure(&device, &config);
         }
+        if self.preferences.clock_enabled {
+            self.clock = Some(clock_overlay::Clock::new(&device, surface_output.format));
+            log::info!(
+                "Clock enabled on {:?}",
+                self.monitor.as_ref().and_then(|m| m.name())
+            );
+        }
         let settings = Arc::new(self.preferences.renderer_settings());
         let flux = Flux::new(
             &device,
@@ -591,6 +610,16 @@ impl ApplicationHandler for LumaApp {
                         * (self.preferences.speed as f64 / 100.0),
                 );
 
+                if let Some(clock) = &self.clock {
+                    clock.draw(
+                        &gpu.command_queue,
+                        &mut encoder,
+                        &view,
+                        gpu.config.width,
+                        gpu.config.height,
+                        window.scale_factor(),
+                    );
+                }
                 gpu.command_queue.submit(Some(encoder.finish()));
                 window.pre_present_notify();
                 gpu.command_queue.present(frame);

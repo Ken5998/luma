@@ -9,6 +9,8 @@ pub struct Preferences {
     pub speed: u32,
     pub size: u32,
     pub quality: String,
+    pub clock_enabled: bool,
+    pub clock_monitor: String,
 }
 
 impl Default for Preferences {
@@ -18,6 +20,8 @@ impl Default for Preferences {
             speed: 100,
             size: 100,
             quality: "Balanced".into(),
+            clock_enabled: false,
+            clock_monitor: "Primary".into(),
         }
     }
 }
@@ -28,6 +32,8 @@ impl Preferences {
         if ![50, 75, 100, 125, 150, 200].contains(&prefs.speed)
             || ![50, 75, 100, 125, 150, 200].contains(&prefs.size)
             || !["Low", "Balanced", "High"].contains(&prefs.quality.as_str())
+            || prefs.clock_monitor.is_empty()
+            || prefs.clock_monitor.len() > 64
         {
             return Err("Unsupported preference value".into());
         }
@@ -128,6 +134,8 @@ mod tests {
         assert_eq!(saved.speed, 150);
         assert_eq!(saved.size, 125);
         assert_eq!(saved.quality, "High");
+        assert!(saved.clock_enabled);
+        assert_eq!(saved.clock_monitor, "Primary");
         std::fs::remove_file(path).unwrap();
         std::fs::remove_dir(directory).unwrap();
     }
@@ -136,6 +144,8 @@ mod tests {
         assert_eq!(Preferences::parse("{}").unwrap(), Preferences::default());
         let prefs = Preferences::parse(r#"{"palette":"Poolside"}"#).unwrap();
         assert_eq!(prefs.speed, 100);
+        assert!(!prefs.clock_enabled);
+        assert_eq!(prefs.clock_monitor, "Primary");
         assert_eq!(
             prefs.renderer_settings().color_mode,
             ColorMode::Preset(ColorPreset::Poolside)
@@ -165,6 +175,8 @@ mod tests {
             speed: 150,
             size: 200,
             quality: "High".into(),
+            clock_enabled: true,
+            clock_monitor: "Primary".into(),
         };
         let reloaded = Preferences::parse(&serde_json::to_string(&prefs).unwrap()).unwrap();
         assert_eq!(reloaded, prefs);

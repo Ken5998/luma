@@ -155,6 +155,7 @@ pub enum ColorPreset {
     Plasma,
     Poolside,
     Freedom,
+    Aurora,
 }
 
 impl ColorPreset {
@@ -163,6 +164,7 @@ impl ColorPreset {
             ColorPreset::Plasma => Some(COLOR_SCHEME_PLASMA),
             ColorPreset::Poolside => Some(COLOR_SCHEME_POOLSIDE),
             ColorPreset::Freedom => Some(COLOR_SCHEME_FREEDOM),
+            ColorPreset::Aurora => Some(COLOR_SCHEME_AURORA),
             _ => None,
         }
     }
@@ -206,6 +208,16 @@ pub static COLOR_SCHEME_FREEDOM: [f32; 24] = [
     1.0,           215.0 / 255.0, 0.0,           1.0, // yellow
 ];
 
+#[rustfmt::skip]
+pub static COLOR_SCHEME_AURORA: [f32; 24] = [
+    0.32, 0.18, 0.80, 1.0,
+    0.58, 0.32, 0.96, 1.0,
+    0.96, 0.42, 0.72, 1.0,
+    0.30, 0.90, 0.78, 1.0,
+    0.12, 0.64, 0.66, 1.0,
+    0.34, 0.44, 0.94, 1.0,
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -216,6 +228,7 @@ mod tests {
             ColorPreset::Plasma,
             ColorPreset::Poolside,
             ColorPreset::Freedom,
+            ColorPreset::Aurora,
         ] {
             assert_eq!(u32::from(ColorMode::Preset(preset)), 1);
             let colors = preset

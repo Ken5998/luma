@@ -1551,6 +1551,7 @@ dependencies = [
 name = "luma-desktop"
 version = "7.2.1"
 dependencies = [
+ "bytemuck",
  "env_logger",
  "futures",
  "image",
