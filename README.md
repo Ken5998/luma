@@ -48,9 +48,30 @@ The launcher runs the executable directly because the Windows `.scr` file associ
 | --- | --- |
 | `/s` | Fullscreen screensaver on every display detected at startup |
 | `--windowed` | Windowed desktop prototype |
-| `/c` | Informational dialog; settings UI is not implemented yet |
+| `/c` | Open the settings window |
 | `/p <HWND>` or `/p:<HWND>` | Animated preview embedded in the supplied Windows window; follows its size and exits when the host closes |
-| No arguments | Windowed mode for `.exe`; informational dialog for `.scr` |
+| No arguments | Windowed mode for `.exe`; settings window for `.scr` |
+
+## Settings
+
+Open **Settings** in Windows Screen Saver Settings, or run:
+
+```powershell
+.\target\release\Luma.exe /c
+```
+
+- **Color palette:** Original, Plasma, Poolside, or Freedom.
+- **Animation speed:** 50–200% of the default speed.
+- **Line size:** 50–200%, independent of display DPI.
+- **Simulation quality:** Low, Balanced (default), or High. Higher quality uses more GPU resources on each display.
+
+**Save** writes preferences to `%LOCALAPPDATA%\Luma\settings.json`. **Cancel** leaves the file unchanged. **Restore defaults** resets the controls; use Save to keep those values.
+
+Preferences apply when a new desktop, screensaver, or preview instance starts. A running animation is not updated live. Missing settings use defaults; unreadable or invalid files produce a log warning and safe defaults. Saving from the settings window replaces invalid files.
+
+The Windows Forms settings panel is embedded in the executable and uses the Windows PowerShell included with Windows. No companion script needs to be installed. A system policy that blocks PowerShell can prevent the settings window from opening.
+
+When updating an installed screensaver, replace the installed `Luma.scr` with the newly built file. Rebuilding this repository does not update copies installed elsewhere.
 
 ## Tests
 
@@ -62,6 +83,12 @@ GPU tests are ignored by default. Run them on a machine with a supported GPU:
 
 ```powershell
 cargo test --locked --release -p luma -p luma-desktop -- --ignored --test-threads=1
+```
+
+The embedded settings form also has an integration test that uses an isolated temporary preferences file:
+
+```powershell
+cargo test --locked --release -p luma-desktop --bin Luma embedded_settings_form -- --ignored
 ```
 
 ### Manual acceptance checks
@@ -82,7 +109,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-preview.ps1
 
 This opens a temporary host window, launches the `.scr` with `/p`, checks its child window and two sizes, then closes the host and verifies that Luma exits. It does not install or select the screensaver. Preview mode keeps the cursor visible and ignores keyboard/mouse exit gestures. A valid host HWND is required; a missing host exits quietly.
 
-The actual Windows Screen Saver Settings dialog still needs a manual acceptance check after installation support is added.
+After replacing an installed copy, check its preview and Settings button in Windows Screen Saver Settings.
 
 ## Diagnostics
 
@@ -92,7 +119,6 @@ Losing focus does not close the screensaver.
 
 ## Roadmap and current limits
 
-- Settings UI and persistent preferences.
 - Display hot-plug handling; restart Luma after connecting or disconnecting a monitor.
 - Custom icon, installer, and uninstall support.
 - Performance tuning for multiple high-resolution displays. Each display currently owns a separate simulation and GPU context; scenes do not span display boundaries.

@@ -388,3 +388,38 @@ fn batched_fluid_ticks_match_separately_submitted_ticks() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires a GPU adapter"]
+fn freedom_palette_renders_visible_lines() {
+    let instance = wgpu::Instance::default();
+    let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+    let renderer = Renderer::new(&adapter, false);
+    let settings = Arc::new(Settings {
+        seed: Some("freedom palette regression".into()),
+        color_mode: flux::settings::ColorMode::Preset(flux::settings::ColorPreset::Freedom),
+        ..Default::default()
+    });
+    let mut flux = Flux::new(
+        &renderer.device,
+        &renderer.queue,
+        wgpu::TextureFormat::Rgba8Unorm,
+        640,
+        400,
+        640,
+        400,
+        BackendCaps {
+            float32_filterable: false,
+        },
+        &settings,
+    )
+    .unwrap();
+    renderer.advance(&mut flux, &mut 0.0, 90);
+    let pixels = renderer.snapshot(&flux, 640, 400);
+    assert!(
+        pixels
+            .chunks_exact(4)
+            .any(|p| p[0] > 30 || p[1] > 30 || p[2] > 30),
+        "Freedom must render visible colors instead of a black frame"
+    );
+}

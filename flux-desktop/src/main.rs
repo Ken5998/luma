@@ -1,6 +1,7 @@
 // Disable the console window that pops up when you launch the .exe
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod preferences;
 mod screensaver;
 use image::RgbaImage;
 use screensaver::{Mode, MouseExit};
@@ -123,6 +124,7 @@ impl GpuState {
 struct LumaApp {
     mode: Mode,
     monitor: Option<MonitorHandle>,
+    preferences: preferences::Preferences,
     mouse_exit: MouseExit,
     runtime: tokio::runtime::Runtime,
     window: Option<Arc<Window>>,
@@ -156,7 +158,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     match mode {
         Mode::Configure => {
-            screensaver::show_message("Luma — screensaver prototype\n\nSettings will be available in a future version.\nTo try the screensaver, run Luma.scr /s.\n\nBased on Flux by Sander Melnikov (MIT).");
+            if let Err(error) = preferences::configure() {
+                screensaver::show_message(&error);
+            }
             return Ok(());
         }
         Mode::Preview(handle) if screensaver::preview_size(handle).is_none() => {
@@ -198,6 +202,8 @@ impl ApplicationHandler for MultiMonitorApp {
             vec![None]
         };
         log::info!("Starting {:?} on {} display(s)", self.mode, monitors.len());
+        let preferences = preferences::load();
+        log::info!("Loaded preferences: {preferences:?}");
         for monitor in monitors {
             if let Some(monitor) = &monitor {
                 log::info!(
@@ -211,6 +217,7 @@ impl ApplicationHandler for MultiMonitorApp {
             let mut display = LumaApp {
                 mode: self.mode,
                 monitor,
+                preferences: preferences.clone(),
                 mouse_exit: MouseExit::default(),
                 runtime: tokio::runtime::Builder::new_multi_thread()
                     .worker_threads(1)
@@ -416,7 +423,7 @@ impl ApplicationHandler for LumaApp {
         if size.is_some() {
             window_surface.configure(&device, &config);
         }
-        let settings = Arc::new(Settings::default());
+        let settings = Arc::new(self.preferences.renderer_settings());
         let flux = Flux::new(
             &device,
             &command_queue,
@@ -579,7 +586,9 @@ impl ApplicationHandler for LumaApp {
                     &mut encoder,
                     &view,
                     None,
-                    self.start.elapsed().as_secs_f64() * 1000.0,
+                    self.start.elapsed().as_secs_f64()
+                        * 1000.0
+                        * (self.preferences.speed as f64 / 100.0),
                 );
 
                 gpu.command_queue.submit(Some(encoder.finish()));

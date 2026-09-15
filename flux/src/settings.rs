@@ -162,6 +162,7 @@ impl ColorPreset {
         match self {
             ColorPreset::Plasma => Some(COLOR_SCHEME_PLASMA),
             ColorPreset::Poolside => Some(COLOR_SCHEME_POOLSIDE),
+            ColorPreset::Freedom => Some(COLOR_SCHEME_FREEDOM),
             _ => None,
         }
     }
@@ -195,9 +196,45 @@ pub static COLOR_SCHEME_POOLSIDE: [f32; 24] = [
     156.0 / 255.0, 208.0 / 255.0, 236.0 / 255.0, 1.0,
 ];
 
+#[rustfmt::skip]
+pub static COLOR_SCHEME_FREEDOM: [f32; 24] = [
+    0.0 / 255.0,   87.0 / 255.0,  183.0 / 255.0, 1.0, // blue
+    0.0 / 255.0,   87.0 / 255.0,  183.0 / 255.0, 1.0, // blue
+    0.0 / 255.0,   87.0 / 255.0,  183.0 / 255.0, 1.0, // blue
+    1.0,           215.0 / 255.0, 0.0,           1.0, // yellow
+    1.0,           215.0 / 255.0, 0.0,           1.0, // yellow
+    1.0,           215.0 / 255.0, 0.0,           1.0, // yellow
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_buffer_based_palette_has_visible_opaque_colors() {
+        for preset in [
+            ColorPreset::Plasma,
+            ColorPreset::Poolside,
+            ColorPreset::Freedom,
+        ] {
+            assert_eq!(u32::from(ColorMode::Preset(preset)), 1);
+            let colors = preset
+                .to_color_wheel()
+                .expect("palette must populate the GPU buffer");
+            for rgba in colors.chunks_exact(4) {
+                assert!(rgba[..3]
+                    .iter()
+                    .all(|c| c.is_finite() && (0.0..=1.0).contains(c)));
+                assert!(rgba[..3].iter().any(|c| *c > 0.0));
+                assert_eq!(rgba[3], 1.0);
+            }
+        }
+        assert_eq!(
+            ColorPreset::Freedom.to_color_wheel().unwrap(),
+            COLOR_SCHEME_FREEDOM
+        );
+        assert_eq!(u32::from(ColorMode::Preset(ColorPreset::Original)), 0);
+    }
 
     #[test]
     fn old_presets_retain_their_units_and_default_to_100_percent() {
