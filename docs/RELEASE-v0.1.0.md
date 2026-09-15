@@ -24,9 +24,9 @@ and preserves a newer selection made in Windows.
 
 ## Current limits
 
-Packages are unsigned. A supported GPU is required, and Windows PowerShell is used
+A supported GPU is required, and Windows PowerShell is used
 for settings and installation. Restart Luma after connecting or disconnecting a
-display. Code signing and automatic updates are not included.
+display. Automatic updates are not included.
 
 Luma begins its own version history at 0.1.0. It is an independent MIT-licensed fork
 of Flux by Sander Melnikov; original credits and license notices are retained.

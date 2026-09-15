@@ -36,7 +36,7 @@ To uninstall, run **Uninstall.cmd** from the package or installation folder. It 
 
 The scripts change only the current user's screensaver executable selection. They do not change activation, idle timeout, or password requirements. Windows applies the executable selection on its next screensaver launch ([Microsoft documentation](https://learn.microsoft.com/en-us/windows/win32/devnotes/scrnsave-exe)). Organization policies may override the selection.
 
-Previously installed manual copies are not removed. The per-user copy becomes the selected screensaver. Packages and scripts are currently unsigned.
+Previously installed manual copies are not removed. The per-user copy becomes the selected screensaver.
 
 ## Build
 
@@ -169,10 +169,10 @@ Losing focus does not close the screensaver.
 ## Roadmap and current limits
 
 - Display hot-plug handling; restart Luma after connecting or disconnecting a monitor.
-- Custom icon and a signed graphical installer.
+- Custom application icon.
 - Performance tuning for multiple high-resolution displays. Each display currently owns a separate simulation and GPU context; scenes do not span display boundaries.
 
-Both graphical and script-based per-user installers are available. Code signing is still pending.
+Both graphical and script-based per-user installers are available.
 
 ## Website
 
