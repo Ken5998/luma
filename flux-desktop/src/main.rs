@@ -159,7 +159,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             screensaver::show_message("Luma — screensaver prototype\n\nSettings will be available in a future version.\nTo try the screensaver, run Luma.scr /s.\n\nBased on Flux by Sander Melnikov (MIT).");
             return Ok(());
         }
-        Mode::Preview => return Ok(()), // Embedded preview is the next milestone.
+        Mode::Preview(handle) if screensaver::preview_size(handle).is_none() => {
+            log::warn!("Preview host is unavailable or unsupported on this platform");
+            return Ok(());
+        }
         _ => {}
     }
 
@@ -248,6 +251,21 @@ impl ApplicationHandler for MultiMonitorApp {
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         for display in &mut self.displays {
+            if let Mode::Preview(handle) = display.mode {
+                let Some(size) = screensaver::preview_size(handle) else {
+                    log::info!("Preview host closed; exiting");
+                    event_loop.exit();
+                    return;
+                };
+                if let Some(window) = &display.window {
+                    if window.inner_size() != size {
+                        let _ = window.request_inner_size(size);
+                    }
+                }
+                if size.width == 0 || size.height == 0 {
+                    continue;
+                }
+            }
             if let Some(window) = &display.window {
                 let id = window.id();
                 display.window_event(event_loop, id, WindowEvent::RedrawRequested);
@@ -295,6 +313,25 @@ impl ApplicationHandler for LumaApp {
             } else {
                 attributes
             }
+        } else {
+            window_attributes
+        };
+        #[cfg(target_os = "windows")]
+        let window_attributes = if let Mode::Preview(handle) = self.mode {
+            let Some(size) = screensaver::preview_size(handle) else {
+                event_loop.exit();
+                return;
+            };
+            let parent = raw_window_handle::Win32WindowHandle::new(
+                std::num::NonZeroIsize::new(handle as isize).unwrap(),
+            );
+            // The host HWND was validated above; its lifetime is checked before every frame.
+            unsafe { window_attributes.with_parent_window(Some(parent.into())) }
+                .with_decorations(false)
+                .with_resizable(false)
+                .with_active(false)
+                .with_position(winit::dpi::PhysicalPosition::new(0, 0))
+                .with_inner_size(size)
         } else {
             window_attributes
         };
@@ -482,7 +519,7 @@ impl ApplicationHandler for LumaApp {
         app.handle_pending_messages(&gpu.device, &gpu.command_queue);
 
         match event {
-            WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::CloseRequested | WindowEvent::Destroyed => event_loop.exit(),
             WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {

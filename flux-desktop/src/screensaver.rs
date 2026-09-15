@@ -9,7 +9,7 @@ pub enum Mode {
     Desktop,
     Saver,
     Configure,
-    Preview,
+    Preview(usize),
 }
 
 impl Mode {
@@ -26,9 +26,9 @@ impl Mode {
             "--windowed" if args.len() == 1 => Ok(Self::Desktop),
             "/s" | "-s" if args.len() == 1 => Ok(Self::Saver),
             "/c" | "-c" => Ok(Self::Configure),
-            "/p" | "-p" => Ok(Self::Preview),
+            "/p" | "-p" if args.len() == 2 => parse_preview_handle(&args[1]),
             _ if flag.starts_with("/c:") || flag.starts_with("-c:") => Ok(Self::Configure),
-            _ if flag.starts_with("/p:") || flag.starts_with("-p:") => Ok(Self::Preview),
+            _ if (flag.starts_with("/p:") || flag.starts_with("-p:")) && args.len() == 1 => parse_preview_handle(&flag[3..]),
             _ => Err("Unknown argument. Use /s for the screensaver or --windowed for the desktop prototype."),
         }
     }
@@ -93,11 +93,26 @@ mod tests {
         for flag in ["/s", "/S", "-s"] {
             assert_eq!(parse(&[flag], true), Ok(Mode::Saver));
         }
-        assert_eq!(parse(&["/P", "1234"], true), Ok(Mode::Preview));
-        assert_eq!(parse(&["/p:1234"], true), Ok(Mode::Preview));
+        assert_eq!(parse(&["/P", "1234"], true), Ok(Mode::Preview(1234)));
+        assert_eq!(parse(&["/p:1234"], true), Ok(Mode::Preview(1234)));
         assert_eq!(parse(&["/C:1234"], true), Ok(Mode::Configure));
         assert_eq!(parse(&["--windowed"], true), Ok(Mode::Desktop));
         assert!(parse(&["/unknown"], true).is_err());
+    }
+
+    #[test]
+    fn invalid_preview_handles_are_rejected() {
+        for args in [
+            vec!["/p"],
+            vec!["/p", "0"],
+            vec!["/p", "-1"],
+            vec!["/p:abc"],
+            vec!["/p:"],
+            vec!["/p", "18446744073709551616"],
+            vec!["/p", "1234", "extra"],
+        ] {
+            assert!(parse(&args, true).is_err(), "{args:?}");
+        }
     }
 
     #[test]
@@ -111,4 +126,39 @@ mod tests {
         assert!(!mouse.moved(Duration::from_secs(2), 500.0, 500.0));
         assert!(mouse.moved(Duration::from_secs(2), 510.0, 500.0));
     }
+}
+
+fn parse_preview_handle(value: &str) -> Result<Mode, &'static str> {
+    value
+        .parse::<usize>()
+        .ok()
+        .filter(|handle| *handle != 0 && *handle <= isize::MAX as usize)
+        .map(Mode::Preview)
+        .ok_or("Preview requires a valid nonzero window handle: /p <HWND>.")
+}
+
+/// Read the host's current client area; a missing host ends the preview.
+#[cfg(target_os = "windows")]
+pub fn preview_size(handle: usize) -> Option<winit::dpi::PhysicalSize<u32>> {
+    use windows_sys::Win32::{
+        Foundation::RECT,
+        UI::WindowsAndMessaging::{GetClientRect, IsWindow},
+    };
+    let hwnd = handle as *mut std::ffi::c_void;
+    let mut rect = RECT::default();
+    // Win32 validates the foreign HWND. No pointer supplied by the caller is dereferenced.
+    unsafe {
+        if IsWindow(hwnd) == 0 || GetClientRect(hwnd, &mut rect) == 0 {
+            return None;
+        }
+    }
+    Some(winit::dpi::PhysicalSize::new(
+        (rect.right - rect.left).max(0) as u32,
+        (rect.bottom - rect.top).max(0) as u32,
+    ))
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn preview_size(_handle: usize) -> Option<winit::dpi::PhysicalSize<u32>> {
+    None
 }

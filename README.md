@@ -49,7 +49,7 @@ The launcher runs the executable directly because the Windows `.scr` file associ
 | `/s` | Fullscreen screensaver on every display detected at startup |
 | `--windowed` | Windowed desktop prototype |
 | `/c` | Informational dialog; settings UI is not implemented yet |
-| `/p` | Exits without opening a window; embedded Windows preview is not implemented yet |
+| `/p <HWND>` or `/p:<HWND>` | Animated preview embedded in the supplied Windows window; follows its size and exits when the host closes |
 | No arguments | Windowed mode for `.exe`; informational dialog for `.scr` |
 
 ## Tests
@@ -74,6 +74,16 @@ cargo test --locked --release -p luma -p luma-desktop -- --ignored --test-thread
 
 Automated tests do not replace visual checks on real multi-monitor hardware.
 
+### Preview integration test
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-preview.ps1
+```
+
+This opens a temporary host window, launches the `.scr` with `/p`, checks its child window and two sizes, then closes the host and verifies that Luma exits. It does not install or select the screensaver. Preview mode keeps the cursor visible and ignores keyboard/mouse exit gestures. A valid host HWND is required; a missing host exits quietly.
+
+The actual Windows Screen Saver Settings dialog still needs a manual acceptance check after installation support is added.
+
 ## Diagnostics
 
 The launcher enables informational logging. Luma writes `Luma.log` next to its executable (`target\release\Luma.log` for a local build), including detected displays, the first rendered frame on each display, and input-triggered exits. The file is overwritten on each launch. If it cannot be created, logging falls back to stderr.
@@ -82,7 +92,6 @@ Losing focus does not close the screensaver.
 
 ## Roadmap and current limits
 
-- Embedded preview in Windows Screen Saver Settings.
 - Settings UI and persistent preferences.
 - Display hot-plug handling; restart Luma after connecting or disconnecting a monitor.
 - Custom icon, installer, and uninstall support.
