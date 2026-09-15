@@ -29,7 +29,7 @@ impl Mode {
             "/p" | "-p" => Ok(Self::Preview),
             _ if flag.starts_with("/c:") || flag.starts_with("-c:") => Ok(Self::Configure),
             _ if flag.starts_with("/p:") || flag.starts_with("-p:") => Ok(Self::Preview),
-            _ => Err("Argomento non riconosciuto. Usa /s per lo screensaver o --windowed per il prototipo."),
+            _ => Err("Unknown argument. Use /s for the screensaver or --windowed for the desktop prototype."),
         }
     }
 }

@@ -2,59 +2,100 @@
 
 # Luma
 
-Screensaver per Windows basato su [Flux di Sander Melnikov](https://github.com/sandydoo/flux), ispirato a Drift di macOS.
+A Windows screensaver with flowing, GPU-rendered light. Based on [Flux by Sander Melnikov](https://github.com/sandydoo/flux), inspired by the Drift screensaver on macOS.
 
-## Stato del prototipo
+Luma is an independent MIT-licensed fork, currently under development.
 
-- Applicazione desktop con titolo ed eseguibile Luma.
-- Modalità screensaver `/s`: schermo intero sul monitor principale, cursore nascosto.
-- Uscita con un tasto, clic, rotella o movimento del mouse (soglia di 8 pixel logici, con due secondi di tolleranza per mouse e tastiera dopo il primo frame).
-- `/c` mostra un messaggio informativo; `/p` termina senza aprire finestre. Impostazioni e anteprima integrata non sono ancora implementate.
-- Prossimi passi: multimonitor, anteprima Windows, preferenze persistenti, icona e installer.
+## Features
 
-## Compilare su Windows
+- Fullscreen animation on each display connected at startup.
+- Independent scenes with per-monitor resolution and DPI scaling.
+- Hidden cursor in screensaver mode.
+- Exit all screens with a key press, mouse click, scroll, or mouse movement.
+- A two-second input grace period after each window's first frame prevents accidental startup exits. Keyboard auto-repeat is ignored; mouse movement uses an 8-logical-pixel threshold.
+- A windowed desktop mode for development and testing.
 
-Prerequisiti: Rust stable tramite rustup, Visual Studio Build Tools con strumenti C++ x64 e Windows SDK.
+## Build
 
-Dalla radice del repository, in PowerShell:
+Requires Windows, a stable Rust toolchain installed with rustup, and Visual Studio Build Tools with the C++ x64 tools and Windows SDK.
+
+Run from the repository root in PowerShell:
 
 ```powershell
 .\scripts\build-windows.ps1
 ```
 
-Produce `target\release\Luma.exe` e `target\release\Luma.scr`, insieme alla licenza. La prima build richiede accesso a crates.io.
+The script produces `target\release\Luma.exe` and `target\release\Luma.scr`, and copies the MIT license alongside them. The first build needs access to crates.io.
 
-## Provare Luma
+## Run
 
 ```powershell
-# Prototipo in finestra
+# Windowed desktop application
 .\target\release\Luma.exe
 
-# Screensaver a schermo intero
+# Fullscreen screensaver on all connected displays
 .\scripts\run-screensaver.ps1
 
-# Prototipo in finestra anche dal file .scr
+# Run the .scr executable in a window
 .\scripts\run-screensaver.ps1 -Windowed
 ```
 
-Un `.scr` senza argomenti mostra il messaggio delle impostazioni. Questa versione non include ancora un installer.
+The launcher runs the executable directly because the Windows `.scr` file association can replace command-line arguments.
 
-## Test
+### Windows screensaver modes
+
+| Argument | Current behavior |
+| --- | --- |
+| `/s` | Fullscreen screensaver on every display detected at startup |
+| `--windowed` | Windowed desktop prototype |
+| `/c` | Informational dialog; settings UI is not implemented yet |
+| `/p` | Exits without opening a window; embedded Windows preview is not implemented yet |
+| No arguments | Windowed mode for `.exe`; informational dialog for `.scr` |
+
+## Tests
 
 ```powershell
 cargo test --locked --release -p luma -p luma-desktop
 ```
 
-I test che richiedono una GPU sono esclusi per default. Per eseguirli aggiungere `-- --ignored --test-threads=1`.
+GPU tests are ignored by default. Run them on a machine with a supported GPU:
 
-## Struttura e origine
+```powershell
+cargo test --locked --release -p luma -p luma-desktop -- --ignored --test-threads=1
+```
 
-I pacchetti del motore e del desktop si chiamano `luma` e `luma-desktop`. Le cartelle `flux/` e `flux-desktop/`, l'alias Rust `flux` e i nomi interni del motore sono mantenuti per facilitare il confronto con upstream. `flux-wasm/`, `flux-gl/` e `web/` contengono i target web e OpenGL ereditati, il cui rebranding completo resta da fare.
+### Manual acceptance checks
 
-## Crediti e licenza
+1. Run the windowed application and check animation and resizing.
+2. Launch the screensaver with multiple displays connected; each should fill its own screen without borders or a visible cursor.
+3. Check mixed resolutions and DPI settings, including displays positioned left of or above the primary display.
+4. Let the startup grace period finish, then move the mouse or press a key. All windows should close together.
+5. Repeat from PowerShell to check that startup modifier-key events do not close the screensaver.
 
-Luma è un fork indipendente di Flux, © 2021 Sander Melnikov, distribuito con [licenza MIT](LICENSE). Il rendering originale e i relativi crediti restano attribuiti al progetto Flux. Il banner Luma è un nuovo asset SVG del fork.
+Automated tests do not replace visual checks on real multi-monitor hardware.
 
-## Diagnostica
+## Diagnostics
 
-Luma scrive il log di avvio e il motivo delle uscite da input in `target\release\Luma.log`. Il file viene riscritto ad ogni avvio. La perdita di focus non chiude lo screensaver.
+The launcher enables informational logging. Luma writes `Luma.log` next to its executable (`target\release\Luma.log` for a local build), including detected displays, the first rendered frame on each display, and input-triggered exits. The file is overwritten on each launch. If it cannot be created, logging falls back to stderr.
+
+Losing focus does not close the screensaver.
+
+## Roadmap and current limits
+
+- Embedded preview in Windows Screen Saver Settings.
+- Settings UI and persistent preferences.
+- Display hot-plug handling; restart Luma after connecting or disconnecting a monitor.
+- Custom icon, installer, and uninstall support.
+- Performance tuning for multiple high-resolution displays. Each display currently owns a separate simulation and GPU context; scenes do not span display boundaries.
+
+This prototype does not yet include an installer.
+
+## Repository structure
+
+The renderer and desktop Cargo packages are named `luma` and `luma-desktop`. The `flux/` and `flux-desktop/` directories, the Rust dependency alias `flux`, and internal renderer names are retained to make comparison with upstream easier.
+
+`flux-wasm/`, `flux-gl/`, and `web/` contain the inherited web and OpenGL targets. Their full rebranding is still pending; the current development focus is the Windows desktop screensaver.
+
+## Credits and license
+
+Luma is derived from Flux, copyright © 2021 Sander Melnikov, under the [MIT license](LICENSE). Original rendering work remains credited to Flux and its author. The Luma banner is a new SVG asset created for this fork.

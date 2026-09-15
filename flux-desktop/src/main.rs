@@ -12,7 +12,8 @@ use winit::{
     event::{ElementState, KeyEvent, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
-    window::{Fullscreen, Window, WindowId},
+    monitor::MonitorHandle,
+    window::{Window, WindowId, WindowLevel},
 };
 
 #[cfg(target_os = "macos")]
@@ -121,6 +122,7 @@ impl GpuState {
 
 struct LumaApp {
     mode: Mode,
+    monitor: Option<MonitorHandle>,
     mouse_exit: MouseExit,
     runtime: tokio::runtime::Runtime,
     window: Option<Arc<Window>>,
@@ -154,37 +156,105 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     match mode {
         Mode::Configure => {
-            screensaver::show_message("Luma — prototipo screensaver\n\nLe impostazioni saranno disponibili in una prossima versione.\nPer provare lo screensaver avvia Luma.scr /s.\n\nBasato su Flux di Sander Melnikov (MIT).");
+            screensaver::show_message("Luma — screensaver prototype\n\nSettings will be available in a future version.\nTo try the screensaver, run Luma.scr /s.\n\nBased on Flux by Sander Melnikov (MIT).");
             return Ok(());
         }
         Mode::Preview => return Ok(()), // Embedded preview is the next milestone.
         _ => {}
     }
 
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(1)
-        .enable_all()
-        .build()
-        .unwrap();
-
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
-
-    let mut luma_app = LumaApp {
+    let mut luma_app = MultiMonitorApp {
         mode,
-        mouse_exit: MouseExit::default(),
-        runtime,
-        window: None,
-        gpu: None,
-        app: None,
-        start: std::time::Instant::now(),
-        first_frame: None,
+        displays: Vec::new(),
     };
-
     event_loop.run_app(&mut luma_app)?;
     Ok(())
 }
 
+// One event loop owns every display, so any exit request closes the entire saver.
+struct MultiMonitorApp {
+    mode: Mode,
+    displays: Vec<LumaApp>,
+}
+
+impl ApplicationHandler for MultiMonitorApp {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        if !self.displays.is_empty() {
+            return;
+        }
+        let monitors = if self.mode == Mode::Saver {
+            let monitors: Vec<_> = event_loop.available_monitors().map(Some).collect();
+            if monitors.is_empty() {
+                vec![event_loop.primary_monitor()]
+            } else {
+                monitors
+            }
+        } else {
+            vec![None]
+        };
+        log::info!("Starting {:?} on {} display(s)", self.mode, monitors.len());
+        for monitor in monitors {
+            if let Some(monitor) = &monitor {
+                log::info!(
+                    "Display {:?}: position={:?}, size={:?}, scale={}",
+                    monitor.name(),
+                    monitor.position(),
+                    monitor.size(),
+                    monitor.scale_factor()
+                );
+            }
+            let mut display = LumaApp {
+                mode: self.mode,
+                monitor,
+                mouse_exit: MouseExit::default(),
+                runtime: tokio::runtime::Builder::new_multi_thread()
+                    .worker_threads(1)
+                    .enable_all()
+                    .build()
+                    .unwrap(),
+                window: None,
+                gpu: None,
+                app: None,
+                start: std::time::Instant::now(),
+                first_frame: None,
+            };
+            display.resumed(event_loop);
+            self.displays.push(display);
+        }
+    }
+
+    fn window_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        window_id: WindowId,
+        event: WindowEvent,
+    ) {
+        // Render all displays as a batch in about_to_wait; Windows paint events
+        // can otherwise continuously favor the active window.
+        if matches!(event, WindowEvent::RedrawRequested) {
+            return;
+        }
+        if let Some(display) = self.displays.iter_mut().find(|display| {
+            display
+                .window
+                .as_ref()
+                .is_some_and(|window| window.id() == window_id)
+        }) {
+            display.window_event(event_loop, window_id, event);
+        }
+    }
+
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        for display in &mut self.displays {
+            if let Some(window) = &display.window {
+                let id = window.id();
+                display.window_event(event_loop, id, WindowEvent::RedrawRequested);
+            }
+        }
+    }
+}
 impl ApplicationHandler for LumaApp {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_some() {
@@ -213,10 +283,18 @@ impl ApplicationHandler for LumaApp {
             .with_inner_size(logical_size);
 
         let window_attributes = if self.mode == Mode::Saver {
-            window_attributes
+            // Explicit borderless bounds keep all displays visible independently of focus.
+            let attributes = window_attributes
                 .with_decorations(false)
                 .with_resizable(false)
-                .with_fullscreen(Some(Fullscreen::Borderless(event_loop.primary_monitor())))
+                .with_window_level(WindowLevel::AlwaysOnTop);
+            if let Some(monitor) = &self.monitor {
+                attributes
+                    .with_position(monitor.position())
+                    .with_inner_size(monitor.size())
+            } else {
+                attributes
+            }
         } else {
             window_attributes
         };
@@ -346,6 +424,12 @@ impl ApplicationHandler for LumaApp {
 
         window.set_visible(true);
         window.request_redraw();
+        log::info!(
+            "Window {:?}: position={:?}, size={:?}",
+            window.id(),
+            window.outer_position(),
+            window.inner_size()
+        );
         self.window = Some(window);
         self.start = std::time::Instant::now();
     }
@@ -466,7 +550,10 @@ impl ApplicationHandler for LumaApp {
                 gpu.command_queue.present(frame);
                 if self.first_frame.is_none() {
                     self.first_frame = Some(std::time::Instant::now());
-                    log::info!("First frame presented; mouse exit arms in two seconds");
+                    log::info!(
+                        "First frame presented on {:?}; input exit arms in two seconds",
+                        window.id()
+                    );
                 }
             }
             _ => (),
