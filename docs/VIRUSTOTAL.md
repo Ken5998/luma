@@ -38,6 +38,8 @@ bounded. Account quotas still apply.
 The workflow adds or replaces only its marked VirusTotal section in the release
 notes, preserving other text. It includes SHA-256 report links, analysis IDs,
 pending states, and actual detection counts only after a completed response.
+Completed reports also list detecting engines and their labels; the JSON artifact
+records engine versions and methods for comparison between releases.
 Reports are also included in the Actions summary and diagnostic artifacts.
 API failures are reported without raw responses or credentials; the run fails
 after saving available results so that a retry is visible. Detections themselves
@@ -58,3 +60,19 @@ API references: [file upload](https://docs.virustotal.com/reference/files-scan),
 [analysis status](https://docs.virustotal.com/reference/analysis).
 The multipart format and release-report approach follow
 [PaneShift](https://github.com/Ken5998/PaneShift/blob/main/docs/CODE_SIGNING.md).
+
+The **Verify installer remediation** workflow on `codex/installer-trust` builds and tests the graphical
+installer against the exact, checksum-verified v0.1.0 screensaver payload. It
+scans the candidate and saves reports as Actions artifacts without changing the
+published release. See [installer investigation](INSTALLER-TRUST.md).
+
+For this comparison, unchanged files reuse matching recorded analysis IDs;
+diagnostic scans include `Luma.scr` and `luma-install-helper.exe` as individual
+files, each verified against the candidate checksums. The normal release workflow
+still scans its two published packages. Neither workflow treats a detection as
+an automatic false positive.
+
+On `main`, **Refresh installer investigation reports** accepts the verification
+run ID and refreshes its recorded analysis IDs without executing or uploading
+the candidate files. Updated Markdown and JSON reports are saved as Actions
+artifacts; the published release is not modified.

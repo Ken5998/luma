@@ -71,6 +71,10 @@ The [VirusTotal workflow](docs/VIRUSTOTAL.md) scans final release assets using t
 on release publication or manually for an existing release or draft. Reports do
 not replace code signing or remove Windows SmartScreen warnings.
 
+The [installer detection investigation](docs/INSTALLER-TRUST.md) records the
+vendor-specific findings and component scans. Experimental installer changes
+remain on `codex/installer-trust`; they are not a confirmed false-positive fix.
+
 ### Deployment tests
 
 ```powershell

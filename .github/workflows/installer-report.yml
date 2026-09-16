@@ -1,0 +1,51 @@
+name: Refresh installer investigation reports
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Verification run containing installer-remediation-review artifacts
+        required: true
+        default: '35109485218'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: installer-report-${{ inputs.run_id }}
+  cancel-in-progress: false
+jobs:
+  report:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Refresh existing analyses without uploading or executing candidates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+          REVIEW_RUN: ${{ inputs.run_id }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          if ($env:REVIEW_RUN -notmatch '\A[0-9]+\z') { throw 'Invalid run ID.' }
+          $directory = Join-Path $PWD 'target/installer-review'
+          gh run download $env:REVIEW_RUN --repo $env:RELEASE_REPOSITORY --name installer-remediation-review --dir $directory
+          if ($LASTEXITCODE -ne 0) { throw 'Could not download investigation artifacts.' }
+          gh release download v0.1.0 --repo $env:RELEASE_REPOSITORY --pattern Luma-0.1.0-windows-x64.zip --dir $directory
+          if ($LASTEXITCODE -ne 0) { throw 'Could not download original ZIP.' }
+          $notes = Get-Content "$directory/virustotal.md" -Raw
+          $scan = ./scripts/submit-virustotal.ps1 -Tag v0.1.0 -Directory $directory -ExistingNotes $notes -ReportOnly -AdditionalFiles Luma.scr,luma-install-helper.exe
+          Get-Content $scan.ReportPath | Add-Content $env:GITHUB_STEP_SUMMARY
+          if ($scan.HasErrors) { throw 'Some reports are unavailable; inspect diagnostics.' }
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: installer-investigation-reports
+          path: |
+            target/installer-review/virustotal.md
+            target/installer-review/virustotal-results.json
+          if-no-files-found: ignore

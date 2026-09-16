@@ -7,12 +7,15 @@ function Assert-LumaReleaseTag([string] $Tag) {
     }
 }
 
-function Get-LumaScanAssets([string] $Directory, [string] $Tag) {
+function Get-LumaScanAssets([string] $Directory, [string] $Tag, [string[]] $AdditionalFiles = @()) {
     Assert-LumaReleaseTag $Tag
     $version = $Tag.Substring(1)
     $checksums = @(Get-Content -LiteralPath (Join-Path $Directory 'SHA256SUMS.txt'))
     # Validate BOTH files before uploading either one.
-    $assets = foreach ($name in @("Luma-$version-Setup-x64.exe", "Luma-$version-windows-x64.zip")) {
+    foreach ($name in $AdditionalFiles) {
+        if ($name -cnotin @('Luma.scr', 'luma-install-helper.exe')) { throw 'Unexpected diagnostic artifact name.' }
+    }
+    $assets = foreach ($name in (@("Luma-$version-Setup-x64.exe", "Luma-$version-windows-x64.zip") + $AdditionalFiles)) {
         $file = Get-Item -LiteralPath (Join-Path $Directory $name)
         if ($file.PSIsContainer -or $file.Length -eq 0 -or $file.Length -gt 650MB) {
             throw "Invalid release artifact size: $name."

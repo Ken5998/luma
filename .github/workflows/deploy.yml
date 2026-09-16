@@ -16,6 +16,9 @@ jobs:
       - name: Test VirusTotal release scripts
         shell: pwsh
         run: ./scripts/test-virustotal.ps1
+      - name: Test registered uninstaller handoff
+        shell: pwsh
+        run: ./scripts/test-uninstall-handoff.ps1
       - name: Set up Rust
         run: rustup default stable
       - name: Test desktop and renderer

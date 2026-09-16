@@ -12,6 +12,14 @@ function Run-Checked($Executable, $Arguments) {
     if (!$process.WaitForExit(60000)) { throw 'Installer timed out.' }
     if ($process.ExitCode -ne 0) { throw "Installer exit code: $($process.ExitCode)" }
 }
+function Run-Uninstall {
+    $command = (Get-ItemProperty -LiteralPath $uninstallKey -Name UninstallString).UninstallString
+    $executable = $command.Trim('"')
+    if ([IO.Path]::GetDirectoryName($executable) -ne $directory -or !(Test-Path -LiteralPath $executable)) {
+        throw 'Registered uninstaller is missing or outside the test installation.'
+    }
+    Run-Checked $executable @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
+}
 try {
     # Use a known existing previous saver; the exact original registry value is restored below.
     $previous = Join-Path $repo 'target\release\Luma.scr'
@@ -23,7 +31,7 @@ try {
     Run-Checked $SetupPath $arguments
     $manifest = Get-Content -LiteralPath (Join-Path $directory 'installation.json') -Raw | ConvertFrom-Json
     if ($manifest.previousScreenSaver -ne $previous) { throw 'Update replaced the original screensaver selection.' }
-    Run-Checked (Join-Path $directory 'unins000.exe') @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
+    Run-Uninstall
     if ((Get-LumaSelection) -ne $previous) { throw 'Uninstall did not restore the original saver.' }
     if (Test-Path -LiteralPath (Join-Path $directory 'Luma.scr')) { throw 'Installed binary was not removed.' }
     if (Test-Path $uninstallKey) { throw 'Installed Apps entry was not removed.' }
@@ -33,7 +41,7 @@ try {
     $manifest = Get-Content -LiteralPath (Join-Path $directory 'installation.json') -Raw | ConvertFrom-Json
     if ($manifest.previousScreenSaver -ne $previous) { throw 'Script installation migration lost the original selection.' }
     Set-LumaSelection $previous
-    Run-Checked (Join-Path $directory 'unins000.exe') @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
+    Run-Uninstall
     if ((Get-LumaSelection) -ne $previous) { throw 'Uninstall overwrote a newer selection.' }
     Write-Output 'PASS: migration from script install and preservation of a newer selection.'
     Write-Output 'PASS: graphical install, update, registration, uninstall, and previous selection restoration.'

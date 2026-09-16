@@ -47,7 +47,9 @@ function Invoke-RestMethod {
     }
     if ($global:lumaVtTestScenario -eq 'pending') { return @{ data = @{ attributes = @{ status = 'queued' } } } }
     if ($global:lumaVtTestScenario -eq 'malformed') { return @{ data = @{ attributes = @{ status = 'completed'; stats = @{} } } } }
-    return @{ data = @{ attributes = @{ status = 'completed'; stats = @{ malicious = 1; suspicious = 2 } } } }
+    return @{ data = @{ attributes = @{ status = 'completed'; stats = @{ malicious = 1; suspicious = 2 }; results = @{
+        Fixture = @{ engine_name = 'Fixture AV'; engine_version = '1'; category = 'malicious'; method = 'heuristic'; result = 'Generic.Test' }
+    } } } }
 }
 function Start-Sleep { param([int]$Milliseconds, [int]$Seconds) $global:lumaVtTestSleeps.Add($Milliseconds + 1000 * $Seconds) }
 function gh {
@@ -80,11 +82,11 @@ function Write-TestChecksums {
         '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name
     } | Set-Content -LiteralPath (Join-Path $directory 'SHA256SUMS.txt')
 }
-function Run-Scan([string]$Scenario, [switch]$ReportOnly, [string]$Notes = '') {
+function Run-Scan([string]$Scenario, [switch]$ReportOnly, [string]$Notes = '', [switch]$ReuseRecordedAnalyses) {
     $global:lumaVtTestScenario = $Scenario
     $global:lumaVtTestCalls.Clear()
     $global:lumaVtTestSleeps.Clear()
-    & "$PSScriptRoot/submit-virustotal.ps1" -Tag v0.1.0 -Directory $directory -ReportOnly:$ReportOnly -ExistingNotes $Notes -WarningAction SilentlyContinue
+    & "$PSScriptRoot/submit-virustotal.ps1" -Tag v0.1.0 -Directory $directory -ReportOnly:$ReportOnly -ExistingNotes $Notes -ReuseRecordedAnalyses:$ReuseRecordedAnalyses -WarningAction SilentlyContinue
 }
 try {
     foreach ($name in @('Luma-0.1.0-Setup-x64.exe', 'Luma-0.1.0-windows-x64.zip')) {
@@ -105,12 +107,17 @@ try {
     Assert ($global:lumaVtTestSleeps.Count -eq 3) 'Requests were not rate limited.'
     $report = Get-Content -LiteralPath $scan.ReportPath -Raw
     Assert ($report.Contains('1 malicious, 2 suspicious')) 'Detection counts were not reported accurately.'
+    Assert ($report.Contains('Fixture AV: Generic.Test (malicious)')) 'Engine diagnosis was omitted.'
     Assert (-not $report.Contains($env:VT_API_KEY)) 'Credential leaked.'
     $scan = Run-Scan completed -ReportOnly -Notes $report
     Assert (-not $scan.HasErrors -and $global:lumaVtTestCalls.Count -eq 2) 'Report-only refresh failed.'
     Assert (@($global:lumaVtTestCalls | Where-Object Method -eq Post).Count -eq 0) 'Refresh uploaded files.'
     $scan = Run-Scan completed -ReportOnly -Notes ($report.Replace($assets[0].Hash, ('a' * 64)))
     Assert ($scan.HasErrors -and $global:lumaVtTestCalls.Count -eq 1) 'Refresh accepted analysis for a different hash.'
+    $scan = Run-Scan completed -ReuseRecordedAnalyses -Notes ($report.Replace($assets[0].Hash, ('a' * 64)))
+    Assert (-not $scan.HasErrors -and $global:lumaVtTestCalls.Count -eq 3) 'Matching archive analysis was not reused.'
+    Assert (@($global:lumaVtTestCalls | Where-Object Method -eq Post).Count -eq 1) 'Unchanged archive was uploaded again.'
+    Assert-Rejected { Get-LumaScanAssets $directory v0.1.0 @('../secret.txt') } 'Unsafe diagnostic artifact was accepted.'
 
     $scan = Run-Scan pending
     Assert (-not $scan.HasErrors -and $global:lumaVtTestCalls.Count -eq 8) 'Pending polling was not bounded.'
