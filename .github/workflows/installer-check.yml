@@ -70,6 +70,8 @@ jobs:
           name: installer-remediation-review
           path: |
             target/installer-review/Luma-0.1.0-Setup-x64.exe
+            target/installer-review/Luma.scr
+            target/installer-review/luma-install-helper.exe
             target/installer-review/SHA256SUMS.txt
             target/installer-review/virustotal.*
             target/installer-review/virustotal-results.json

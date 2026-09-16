@@ -36,7 +36,9 @@ Source: "{#PayloadDir}\Luma.scr"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#HelperPath}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#HelperPath}"; Flags: dontcopy
-Source: "setup-uninstall.cmd"; DestDir: "{app}"; DestName: "Uninstall.cmd"; Flags: ignoreversion
+
+[Icons]
+Name: "{app}\Uninstall"; Filename: "{uninstallexe}"
 
 [Registry]
 Root: HKCU; Subkey: "Control Panel\Desktop"; ValueType: string; ValueName: "SCRNSAVE.EXE"; ValueData: "{app}\Luma.scr"
@@ -53,6 +55,7 @@ Type: files; Name: "{app}\Luma.log"
 Type: files; Name: "{app}\setup-actions.ps1"
 Type: files; Name: "{app}\deployment.ps1"
 Type: files; Name: "{app}\Uninstall.ps1"
+Type: files; Name: "{app}\Uninstall.cmd"
 
 [Code]
 function RunAction(HelperPath, Action: String): Boolean;

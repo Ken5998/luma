@@ -8,9 +8,18 @@ if (Test-Path $uninstallKey) { throw 'An existing graphical Luma installation is
 $directory = Join-Path $repo ('target\installer-test-' + [Guid]::NewGuid().ToString('N'))
 $original = Get-LumaSelection
 function Run-Checked($Executable, $Arguments) {
+    Write-Output "Running installer check: $Executable"
     $process = Start-Process -FilePath $Executable -ArgumentList $Arguments -WindowStyle Hidden -PassThru
     if (!$process.WaitForExit(60000)) { throw 'Installer timed out.' }
     if ($process.ExitCode -ne 0) { throw "Installer exit code: $($process.ExitCode)" }
+}
+function Run-Uninstall {
+    $command = (Get-ItemProperty -LiteralPath $uninstallKey -Name UninstallString).UninstallString
+    $executable = $command.Trim('"')
+    if ([IO.Path]::GetDirectoryName($executable) -ne $directory -or !(Test-Path -LiteralPath $executable)) {
+        throw 'Registered uninstaller is missing or outside the test installation.'
+    }
+    Run-Checked $executable @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
 }
 try {
     # Use a known existing previous saver; the exact original registry value is restored below.
@@ -28,7 +37,7 @@ try {
     Run-Checked $SetupPath $arguments
     $manifest = Get-Content -LiteralPath (Join-Path $directory 'installation.json') -Raw | ConvertFrom-Json
     if ($manifest.previousScreenSaver -ne $previous) { throw 'Update replaced the original screensaver selection.' }
-    Run-Checked (Join-Path $directory 'unins000.exe') @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
+    Run-Uninstall
     if ((Get-LumaSelection) -ne $previous) { throw 'Uninstall did not restore the original saver.' }
     if (Test-Path -LiteralPath (Join-Path $directory 'Luma.scr')) { throw 'Installed binary was not removed.' }
     if (Test-Path $uninstallKey) { throw 'Installed Apps entry was not removed.' }
@@ -41,7 +50,7 @@ try {
         if (Test-Path -LiteralPath (Join-Path $directory $legacy)) { throw "Migration retained legacy action script: $legacy" }
     }
     Set-LumaSelection $previous
-    Run-Checked (Join-Path $directory 'unins000.exe') @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
+    Run-Uninstall
     if ((Get-LumaSelection) -ne $previous) { throw 'Uninstall overwrote a newer selection.' }
     if ($PreviousSetupPath) {
         Run-Checked $PreviousSetupPath $arguments
@@ -51,7 +60,7 @@ try {
         foreach ($legacy in @('setup-actions.ps1','deployment.ps1','Uninstall.ps1')) {
             if (Test-Path -LiteralPath (Join-Path $directory $legacy)) { throw "Old setup upgrade retained legacy action script: $legacy" }
         }
-        Run-Checked (Join-Path $directory 'unins000.exe') @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
+        Run-Uninstall
         if ((Get-LumaSelection) -ne $previous) { throw 'Native uninstall after old graphical setup upgrade lost the original selection.' }
         if (Test-Path $uninstallKey) { throw 'Upgraded setup left an Installed Apps entry.' }
         Write-Output 'PASS: upgrade from original graphical setup and native uninstall.'

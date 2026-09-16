@@ -26,7 +26,7 @@ Release packages offer two options:
 - **`Luma-<version>-Setup-x64.exe`**: a graphical installer for the current user, with an entry in Windows Installed Apps. No administrator rights are needed.
 - **`Luma-<version>-windows-x64.zip`**: the screensaver with PowerShell install/uninstall scripts.
 
-Both use `%LOCALAPPDATA%\Luma\Screensaver` and preserve appearance preferences. Close Luma and Windows Screen Saver Settings before installing or updating. The graphical installer also supports upgrades from the script-based installation. If you installed with Setup, uninstall from Windows Installed Apps or run `Uninstall.cmd` to open the registered uninstaller.
+Both use `%LOCALAPPDATA%\Luma\Screensaver` and preserve appearance preferences. Close Luma and Windows Screen Saver Settings before installing or updating. The graphical installer also supports upgrades from the script-based installation. If you installed with Setup, uninstall from Windows Installed Apps or use the **Uninstall** shortcut in the installation folder.
 
 Extract the Windows ZIP, close Luma and Windows Screen Saver Settings, then double-click **Install.cmd**. It installs for the current user in `%LOCALAPPDATA%\Luma\Screensaver`, selects Luma, and opens Windows Screen Saver Settings. Check the wait time and sign-in preference, then click Apply. No administrator rights are needed.
 
