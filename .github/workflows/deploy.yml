@@ -13,6 +13,9 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Test VirusTotal release scripts
+        shell: pwsh
+        run: ./scripts/test-virustotal.ps1
       - name: Set up Rust
         run: rustup default stable
       - name: Test desktop and renderer
