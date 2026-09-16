@@ -1,6 +1,9 @@
 # Suspected false-positive review request
 
-Prepared for maintainer review. **Not submitted to any vendor.**
+SecureAge: submitted on 2026-09-16 with both checksum-verified original samples.
+The official form confirmed **Report Submitted** and forwarding to its detection
+team. Email notification was requested. No case number was displayed.
+DeepInstinct: prepared; email submission remains pending.
 
 ## SecureAge
 
@@ -58,8 +61,9 @@ were flagged. This suggests an installer-related difference for your engine,
 but does not establish the precise cause. Please review the public released
 sample, explain the classification if possible, and correct it if appropriate.
 
-Use the vendor contact linked from VirusTotal's current contributors directory:
-https://docs.virustotal.com/docs/contributors
+Recipient: `vt-fps-requests@deepinstinct.com`, verified in
+[VirusTotal's false-positive contacts](https://docs.virustotal.com/docs/false-positive-contacts)
+on 2026-09-16.
 
 ## Submission notes
 

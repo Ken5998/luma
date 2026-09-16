@@ -21,8 +21,8 @@ Links: [original setup report](https://www.virustotal.com/gui/file/e0361bffc4534
 
 These are experimental builds, not a confirmed antivirus fix. Production retains
 the original installer implementation pending the classification review. The
-reporting improvements and registered-uninstaller lookup can be integrated
-independently without shipping an unproven replacement.
+reporting improvements and registered-uninstaller lookup are integrated on
+`main` independently without shipping an unproven replacement.
 
 The old setup extracted PowerShell scripts to a temporary directory and ran
 them hidden with `-ExecutionPolicy Bypass` for preparation and uninstall.
@@ -90,7 +90,27 @@ Subsequent component reports observed on 2026-09-16:
 | --- | --- | --- |
 | Original `Luma.scr` | `d85ff71abb7de287da02acdb7d159bb6c7da302d6c8d42b0b6bf56012c458ffc` | 1/70, SecureAge: Malicious |
 | Experimental native helper | `d8ec0d787424f453ff6fba381a835a6ff9b40ff02cc4dfb4d4bf922f9832c19d` | 1/68, Bkav Pro: W32.Malware.F72E07D5; DeepInstinct failed, Google timed out |
-| Uncompressed experimental setup | `05840dab034bfc719890016f372034e8e3774552160ce6cfc66946479cd2a73c` | Analysis pending when the build artifact was saved; consult live report |
+| Uncompressed experimental setup | `05840dab034bfc719890016f372034e8e3774552160ce6cfc66946479cd2a73c` | Initially pending; completed API results below |
+
+[Report refresh 35111623941](https://github.com/Ken5998/luma/actions/runs/35111623941)
+retrieved the recorded analysis IDs at 14:53 UTC. Its downloadable JSON preserves
+the hashes, analysis IDs, engine versions, signatures and counts:
+
+- Uncompressed setup: 2 malicious (APEX `Malicious`, Microsoft
+  `Trojan:Win32/Wacatac.B!ml`), 62 undetected, 5 timeouts, 1 failure and
+  4 unsupported results.
+- Original screensaver: 1 malicious (APEX `Malicious`), 69 undetected and
+  4 unsupported results.
+- Helper: 1 malicious (Bkav `W32.Malware.F72E07D5`), 67 undetected,
+  1 timeout, 1 failure and 4 unsupported results.
+- Original ZIP: 0 malicious/suspicious, 67 undetected, 1 failure and
+  6 unsupported results.
+
+The recorded API analysis and the previously observed live screensaver page
+name different detecting engines (APEX versus SecureAge). These are separate
+observations, not evidence of a confirmed reclassification. Preserve the
+analysis-specific JSON when comparing results. The uncompressed candidate is
+also flagged and remains experimental; it is not a verified fix.
 
 [Screensaver report](https://www.virustotal.com/gui/file/d85ff71abb7de287da02acdb7d159bb6c7da302d6c8d42b0b6bf56012c458ffc/detection),
 [helper report](https://www.virustotal.com/gui/file/d8ec0d787424f453ff6fba381a835a6ff9b40ff02cc4dfb4d4bf922f9832c19d/detection),
@@ -100,8 +120,9 @@ SecureAge's detection on the standalone original screensaver shows that changing
 only the installer cannot resolve every classification. The native helper also
 introduces a separately flagged file, so it is not promoted as a remediation.
 No confirmed malicious behavior or precise vendor rationale has been established
-by these generic results. [Prepared vendor review requests](ANTIVIRUS-REVIEW.md)
-ask for that determination; they have not been sent automatically.
+by these generic results. [Vendor review requests](ANTIVIRUS-REVIEW.md)
+ask for that determination. SecureAge received both original samples on
+2026-09-16 after maintainer authorization; DeepInstinct email submission is pending.
 
 Generic classifications cannot establish the exact cause. A new file also has
 a different hash and reputation. Even if a new scan improves, it does not by
