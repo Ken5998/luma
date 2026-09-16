@@ -19,7 +19,7 @@ jobs:
       - name: Set up Rust
         run: rustup default stable
       - name: Test desktop and renderer
-        run: cargo test --locked --release -p luma -p luma-desktop
+        run: cargo test --locked --release -p luma -p luma-desktop -p luma-installer
       - name: Build install package
         shell: pwsh
         run: ./scripts/package-windows.ps1

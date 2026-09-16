@@ -1,0 +1,70 @@
+name: Verify installer remediation
+on:
+  push:
+    branches: [codex/installer-trust]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: installer-remediation
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Test and build native installer helper
+        run: |
+          cargo test --locked -p luma-installer
+          if ($LASTEXITCODE -ne 0) { throw 'Installer helper tests failed.' }
+          cargo build --locked --release -p luma-installer
+          if ($LASTEXITCODE -ne 0) { throw 'Installer helper build failed.' }
+      - name: Compile and test setup with the exact original screensaver payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          $iscc = ./scripts/install-inno-setup.ps1
+          $directory = Join-Path $PWD 'target/installer-review'
+          New-Item -ItemType Directory $directory | Out-Null
+          gh release download v0.1.0 --repo $env:RELEASE_REPOSITORY --dir $directory --pattern 'Luma-0.1.0-windows-x64.zip' --pattern 'Luma-0.1.0-Setup-x64.exe' --pattern SHA256SUMS.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Could not download original release.' }
+          . ./scripts/virustotal-common.ps1
+          $null = Get-LumaScanAssets $directory v0.1.0
+          $payload = Join-Path $directory 'payload'
+          Expand-Archive -LiteralPath "$directory/Luma-0.1.0-windows-x64.zip" -DestinationPath $payload
+          Move-Item -LiteralPath "$directory/Luma-0.1.0-Setup-x64.exe" -Destination "$directory/original-setup.exe"
+          $helper = Join-Path $PWD 'target/release/luma-install-helper.exe'
+          & $iscc '/DAppVersion=0.1.0' "/DPayloadDir=$payload/Luma-windows-x64" "/DHelperPath=$helper" "/DOutputDir=$directory" ./packaging/windows/Luma.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
+          Copy-Item "$payload/Luma-windows-x64/Luma.scr" target/release/Luma.scr
+          ./scripts/test-installer.ps1 -SetupPath "$directory/Luma-0.1.0-Setup-x64.exe"
+          $checksums = foreach ($name in @('Luma-0.1.0-Setup-x64.exe', 'Luma-0.1.0-windows-x64.zip')) {
+            '{0}  {1}' -f (Get-FileHash "$directory/$name" -Algorithm SHA256).Hash.ToLowerInvariant(), $name
+          }
+          $checksums | Set-Content "$directory/SHA256SUMS.txt" -Encoding ascii
+      - name: Test scan reporting
+        run: ./scripts/test-virustotal.ps1
+      - name: Scan candidate without changing the published release
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: |
+          $scan = ./scripts/submit-virustotal.ps1 -Tag v0.1.0 -Directory target/installer-review
+          Get-Content $scan.ReportPath | Add-Content $env:GITHUB_STEP_SUMMARY
+          if ($scan.HasErrors) { throw 'Some VirusTotal requests failed; inspect reports.' }
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: installer-remediation-review
+          path: |
+            target/installer-review/Luma-0.1.0-Setup-x64.exe
+            target/installer-review/SHA256SUMS.txt
+            target/installer-review/virustotal.*
+            target/installer-review/virustotal-results.json
+          if-no-files-found: ignore

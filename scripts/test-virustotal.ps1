@@ -47,7 +47,9 @@ function Invoke-RestMethod {
     }
     if ($global:lumaVtTestScenario -eq 'pending') { return @{ data = @{ attributes = @{ status = 'queued' } } } }
     if ($global:lumaVtTestScenario -eq 'malformed') { return @{ data = @{ attributes = @{ status = 'completed'; stats = @{} } } } }
-    return @{ data = @{ attributes = @{ status = 'completed'; stats = @{ malicious = 1; suspicious = 2 } } } }
+    return @{ data = @{ attributes = @{ status = 'completed'; stats = @{ malicious = 1; suspicious = 2 }; results = @{
+        Fixture = @{ engine_name = 'Fixture AV'; engine_version = '1'; category = 'malicious'; method = 'heuristic'; result = 'Generic.Test' }
+    } } } }
 }
 function Start-Sleep { param([int]$Milliseconds, [int]$Seconds) $global:lumaVtTestSleeps.Add($Milliseconds + 1000 * $Seconds) }
 function gh {
@@ -105,6 +107,7 @@ try {
     Assert ($global:lumaVtTestSleeps.Count -eq 3) 'Requests were not rate limited.'
     $report = Get-Content -LiteralPath $scan.ReportPath -Raw
     Assert ($report.Contains('1 malicious, 2 suspicious')) 'Detection counts were not reported accurately.'
+    Assert ($report.Contains('Fixture AV: Generic.Test (malicious)')) 'Engine diagnosis was omitted.'
     Assert (-not $report.Contains($env:VT_API_KEY)) 'Credential leaked.'
     $scan = Run-Scan completed -ReportOnly -Notes $report
     Assert (-not $scan.HasErrors -and $global:lumaVtTestCalls.Count -eq 2) 'Report-only refresh failed.'

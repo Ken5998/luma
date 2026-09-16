@@ -45,8 +45,22 @@ foreach ($asset in $assets) {
                     if ($null -eq $value -or [string]$value -notmatch '\A[0-9]+\z') { throw 'Missing analysis counts.' }
                 }
                 $result.stats = $attributes.stats
+                $engineResults = if ($attributes.results -is [Collections.IDictionary]) {
+                    @($attributes.results.Values)
+                } else { @($attributes.results.PSObject.Properties | ForEach-Object Value) }
+                $result.detections = @($engineResults | Where-Object category -in @('malicious', 'suspicious') | Sort-Object engine_name | ForEach-Object {
+                    [pscustomobject]@{ engine = $_.engine_name; version = $_.engine_version; method = $_.method; category = $_.category; signature = $_.result }
+                })
                 $result.status = 'completed'
                 $notes.Add("  Analysis completed: $($attributes.stats.malicious) malicious, $($attributes.stats.suspicious) suspicious engine results. See report for context.")
+                foreach ($detection in $result.detections) {
+                    # API labels are data; render only bounded, single-line plain text.
+                    $engine = ([string]$detection.engine -replace '[^\p{L}\p{N} .:/_-]', '?')
+                    $label = ([string]$detection.signature -replace '[^\p{L}\p{N} .:/_-]', '?')
+                    if ($engine.Length -gt 100) { $engine = $engine.Substring(0, 100) }
+                    if ($label.Length -gt 200) { $label = $label.Substring(0, 200) }
+                    $notes.Add("  - ${engine}: $label ($($detection.category)).")
+                }
                 break
             }
             $result.status = $attributes.status

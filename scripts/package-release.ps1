@@ -8,11 +8,14 @@ try {
     $metadata = cargo metadata --locked --no-deps --format-version 1 | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) { throw 'Cargo metadata failed.' }
     $version = ($metadata.packages | Where-Object name -eq 'luma-desktop').version
+    cargo build --locked --release -p luma-installer
+    if ($LASTEXITCODE -ne 0) { throw 'Installer helper build failed.' }
+    $helper = Join-Path $metadata.target_directory 'release\luma-install-helper.exe'
     $output = Join-Path $metadata.target_directory "releases\$version"
     $payload = Join-Path $output 'payload'
     New-Item -ItemType Directory -Path $payload -Force | Out-Null
     Expand-Archive -LiteralPath (Join-Path $metadata.target_directory 'distribution\Luma-windows-x64.zip') -DestinationPath $payload -Force
-    & $IsccPath "/DAppVersion=$version" "/DPayloadDir=$payload\Luma-windows-x64" "/DOutputDir=$output" (Join-Path $repo 'packaging\windows\Luma.iss')
+    & $IsccPath "/DAppVersion=$version" "/DPayloadDir=$payload\Luma-windows-x64" "/DHelperPath=$helper" "/DOutputDir=$output" (Join-Path $repo 'packaging\windows\Luma.iss')
     if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
     Copy-Item -LiteralPath (Join-Path $metadata.target_directory 'distribution\Luma-windows-x64.zip') -Destination (Join-Path $output "Luma-$version-windows-x64.zip") -Force
     Get-ChildItem -LiteralPath $output -File | Where-Object Extension -in @('.exe','.zip') | Sort-Object Name | ForEach-Object {

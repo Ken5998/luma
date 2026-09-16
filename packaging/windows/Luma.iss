@@ -27,16 +27,15 @@ SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\Luma.scr
 VersionInfoVersion={#AppVersion}.0
+VersionInfoDescription=Luma Screensaver Setup
+VersionInfoProductName=Luma
 
 [Files]
 Source: "{#PayloadDir}\Luma.scr"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#PayloadDir}\deployment.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#PayloadDir}\Uninstall.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#PayloadDir}\Uninstall.cmd"; DestDir: "{app}"; Flags: ignoreversion
-Source: "setup-actions.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "setup-actions.ps1"; Flags: dontcopy
-Source: "deployment.ps1"; Flags: dontcopy
+Source: "{#HelperPath}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#HelperPath}"; Flags: dontcopy
+Source: "setup-uninstall.cmd"; DestDir: "{app}"; DestName: "Uninstall.cmd"; Flags: ignoreversion
 
 [Registry]
 Root: HKCU; Subkey: "Control Panel\Desktop"; ValueType: string; ValueName: "SCRNSAVE.EXE"; ValueData: "{app}\Luma.scr"
@@ -48,22 +47,26 @@ Filename: "{sys}\rundll32.exe"; Parameters: "shell32.dll,Control_RunDLL desk.cpl
 Type: files; Name: "{app}\installation.json"
 Type: files; Name: "{app}\Luma.log"
 
+[InstallDelete]
+; Explicit files owned by the old setup/ZIP installation; no user preferences.
+Type: files; Name: "{app}\setup-actions.ps1"
+Type: files; Name: "{app}\deployment.ps1"
+Type: files; Name: "{app}\Uninstall.ps1"
+
 [Code]
-function RunAction(ScriptPath, Action: String): Boolean;
+function RunAction(HelperPath, Action: String): Boolean;
 var ExitCode: Integer;
 begin
-  Result := Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-    '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + ScriptPath +
-    '" -Action ' + Action + ' -InstallDirectory "' + ExpandConstant('{app}') + '"',
+  Result := Exec(HelperPath,
+    Action + ' "' + ExpandConstant('{app}') + '"',
     '', SW_HIDE, ewWaitUntilTerminated, ExitCode);
   if Result then Result := ExitCode = 0;
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
-  ExtractTemporaryFile('setup-actions.ps1');
-  ExtractTemporaryFile('deployment.ps1');
-  if not RunAction(ExpandConstant('{tmp}\setup-actions.ps1'), 'Prepare') then
+  ExtractTemporaryFile('luma-install-helper.exe');
+  if not RunAction(ExpandConstant('{tmp}\luma-install-helper.exe'), 'Prepare') then
     Result := 'Close Luma and Windows Screen Saver Settings, then retry. Installation metadata must be valid.'
   else Result := '';
 end;
@@ -71,6 +74,6 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
-    if not RunAction(ExpandConstant('{app}\setup-actions.ps1'), 'Restore') then
+    if not RunAction(ExpandConstant('{app}\luma-install-helper.exe'), 'Restore') then
       RaiseException('Close Luma and Windows Screen Saver Settings, then retry. Uninstall could not restore the previous selection.');
 end;

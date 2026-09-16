@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["luma", "luma-desktop"]
+members = ["luma", "luma-desktop", "luma-installer"]
 
 [workspace.package]
 version = "0.1.0"

@@ -20,6 +20,11 @@ try {
     Run-Checked $SetupPath $arguments
     if ((Get-LumaSelection) -ne (Join-Path $directory 'Luma.scr')) { throw 'Setup did not select the installed saver.' }
     if (!(Test-Path $uninstallKey)) { throw 'Installed Apps registration is missing.' }
+    if (!(Test-Path -LiteralPath (Join-Path $directory 'luma-install-helper.exe'))) { throw 'Native setup helper is missing.' }
+    foreach ($legacy in @('setup-actions.ps1','deployment.ps1','Uninstall.ps1')) {
+        if (Test-Path -LiteralPath (Join-Path $directory $legacy)) { throw "Graphical setup still ships legacy action script: $legacy" }
+    }
+    if ((Get-FileHash (Join-Path $directory 'Luma.scr')).Hash -ne (Get-FileHash $previous).Hash) { throw 'Setup changed the screensaver payload.' }
     Run-Checked $SetupPath $arguments
     $manifest = Get-Content -LiteralPath (Join-Path $directory 'installation.json') -Raw | ConvertFrom-Json
     if ($manifest.previousScreenSaver -ne $previous) { throw 'Update replaced the original screensaver selection.' }
@@ -32,6 +37,9 @@ try {
     Run-Checked $SetupPath $arguments
     $manifest = Get-Content -LiteralPath (Join-Path $directory 'installation.json') -Raw | ConvertFrom-Json
     if ($manifest.previousScreenSaver -ne $previous) { throw 'Script installation migration lost the original selection.' }
+    foreach ($legacy in @('setup-actions.ps1','deployment.ps1','Uninstall.ps1')) {
+        if (Test-Path -LiteralPath (Join-Path $directory $legacy)) { throw "Migration retained legacy action script: $legacy" }
+    }
     Set-LumaSelection $previous
     Run-Checked (Join-Path $directory 'unins000.exe') @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
     if ((Get-LumaSelection) -ne $previous) { throw 'Uninstall overwrote a newer selection.' }
