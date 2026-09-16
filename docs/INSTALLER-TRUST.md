@@ -122,7 +122,12 @@ introduces a separately flagged file, so it is not promoted as a remediation.
 No confirmed malicious behavior or precise vendor rationale has been established
 by these generic results. [Vendor review requests](ANTIVIRUS-REVIEW.md)
 ask for that determination. SecureAge received both original samples on
-2026-09-16 after maintainer authorization; DeepInstinct email submission is pending.
+2026-09-16 after maintainer authorization; the DeepInstinct review request was
+also emailed that day. Both vendor reviews remain pending.
+
+The integrated reporting and uninstall-handoff changes passed the full
+[main build 35111478116](https://github.com/Ken5998/luma/actions/runs/35111478116),
+including the dedicated PowerShell regression tests.
 
 Generic classifications cannot establish the exact cause. A new file also has
 a different hash and reputation. Even if a new scan improves, it does not by

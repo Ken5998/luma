@@ -3,7 +3,9 @@
 SecureAge: submitted on 2026-09-16 with both checksum-verified original samples.
 The official form confirmed **Report Submitted** and forwarding to its detection
 team. Email notification was requested. No case number was displayed.
-DeepInstinct: prepared; email submission remains pending.
+DeepInstinct: emailed on 2026-09-16. Zoho confirmed the message in Sent Mail
+at 17:01 Europe/Zurich. The message includes the original sample download,
+source, checksums and VirusTotal report links. Vendor review is pending.
 
 ## SecureAge
 
