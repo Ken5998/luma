@@ -22,8 +22,9 @@ RestartApplications=no
 LicenseFile=..\..\LICENSE
 OutputDir={#OutputDir}
 OutputBaseFilename=Luma-{#AppVersion}-Setup-x64
-Compression=lzma2
-SolidCompression=yes
+; Keep the executable payload directly inspectable instead of solid compression.
+Compression=none
+SolidCompression=no
 WizardStyle=modern
 UninstallDisplayIcon={app}\Luma.scr
 VersionInfoVersion={#AppVersion}.0

@@ -4,11 +4,13 @@ param(
     [Parameter(Mandatory)][string] $Tag,
     [Parameter(Mandatory)][string] $Directory,
     [string] $ExistingNotes = '',
-    [switch] $ReportOnly
+    [switch] $ReportOnly,
+    [switch] $ReuseRecordedAnalyses,
+    [ValidateSet('Luma.scr', 'luma-install-helper.exe')][string[]] $AdditionalFiles = @()
 )
 . "$PSScriptRoot/virustotal-common.ps1"
 if ([string]::IsNullOrWhiteSpace($env:VT_API_KEY)) { throw 'VT_API_KEY is not configured.' }
-$assets = @(Get-LumaScanAssets $Directory $Tag)
+$assets = @(Get-LumaScanAssets $Directory $Tag $AdditionalFiles)
 $script:vtLastRequest = [DateTime]::MinValue
 $notes = [Collections.Generic.List[string]]::new()
 $results = [Collections.Generic.List[object]]::new()
@@ -20,9 +22,13 @@ foreach ($asset in $assets) {
     $stage = 'existing analysis lookup'
     $result = [ordered]@{ name = $asset.Name; sha256 = $asset.Hash; url = $asset.Url; status = 'unavailable' }
     try {
+        $analysisId = $null
         if ($ReportOnly) {
             $analysisId = Get-VirusTotalAnalysisId $ExistingNotes $asset
-        } else {
+        } elseif ($ReuseRecordedAnalyses) {
+            try { $analysisId = Get-VirusTotalAnalysisId $ExistingNotes $asset } catch { $analysisId = $null }
+        }
+        if (-not $analysisId) {
             $stage = 'upload URL lookup'
             $uploadUrl = 'https://www.virustotal.com/api/v3/files'
             if ($asset.File.Length -gt 32MB) { $uploadUrl = (Invoke-VirusTotal 'https://www.virustotal.com/api/v3/files/upload_url').data }

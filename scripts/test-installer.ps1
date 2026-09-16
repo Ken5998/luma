@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$SetupPath)
+param([Parameter(Mandatory)][string]$SetupPath, [string]$PreviousSetupPath)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 . (Join-Path $repo 'packaging\windows\deployment.ps1')
@@ -43,6 +43,19 @@ try {
     Set-LumaSelection $previous
     Run-Checked (Join-Path $directory 'unins000.exe') @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
     if ((Get-LumaSelection) -ne $previous) { throw 'Uninstall overwrote a newer selection.' }
+    if ($PreviousSetupPath) {
+        Run-Checked $PreviousSetupPath $arguments
+        Run-Checked $SetupPath $arguments
+        $manifest = Get-Content -LiteralPath (Join-Path $directory 'installation.json') -Raw | ConvertFrom-Json
+        if ($manifest.previousScreenSaver -ne $previous) { throw 'Old graphical setup upgrade lost the original selection.' }
+        foreach ($legacy in @('setup-actions.ps1','deployment.ps1','Uninstall.ps1')) {
+            if (Test-Path -LiteralPath (Join-Path $directory $legacy)) { throw "Old setup upgrade retained legacy action script: $legacy" }
+        }
+        Run-Checked (Join-Path $directory 'unins000.exe') @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
+        if ((Get-LumaSelection) -ne $previous) { throw 'Native uninstall after old graphical setup upgrade lost the original selection.' }
+        if (Test-Path $uninstallKey) { throw 'Upgraded setup left an Installed Apps entry.' }
+        Write-Output 'PASS: upgrade from original graphical setup and native uninstall.'
+    }
     Write-Output 'PASS: migration from script install and preservation of a newer selection.'
     Write-Output 'PASS: graphical install, update, registration, uninstall, and previous selection restoration.'
 } finally { Set-LumaSelection $original }

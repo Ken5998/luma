@@ -66,6 +66,12 @@ For versioned release assets, install Inno Setup 6.7+ and run:
 
 This creates the Setup executable, ZIP, and `SHA256SUMS.txt` under `target\releases\<version>`. Luma starts its own release numbering at v0.1.0, independent of the inherited Flux version.
 
+The graphical setup builds `luma-installer`, a small Rust helper for installation
+metadata and screensaver restoration. It uses Windows APIs directly and requires
+no PowerShell custom actions or execution-policy override. The ZIP install
+scripts and the application's settings dialog still use PowerShell. Details and
+validation evidence are in the [installer investigation](docs/INSTALLER-TRUST.md).
+
 The [VirusTotal workflow](docs/VIRUSTOTAL.md) scans final release assets using the
 `VT_API_KEY` repository secret and adds report links to the release notes. It runs
 on release publication or manually for an existing release or draft. Reports do

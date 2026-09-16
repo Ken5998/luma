@@ -35,6 +35,9 @@ jobs:
           New-Item -ItemType Directory $directory | Out-Null
           gh release download v0.1.0 --repo $env:RELEASE_REPOSITORY --dir $directory --pattern 'Luma-0.1.0-windows-x64.zip' --pattern 'Luma-0.1.0-Setup-x64.exe' --pattern SHA256SUMS.txt
           if ($LASTEXITCODE -ne 0) { throw 'Could not download original release.' }
+          $release = gh release view v0.1.0 --repo $env:RELEASE_REPOSITORY --json body
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read original report IDs.' }
+          ($release | ConvertFrom-Json).body | Set-Content "$directory/existing-notes.md"
           . ./scripts/virustotal-common.ps1
           $null = Get-LumaScanAssets $directory v0.1.0
           $payload = Join-Path $directory 'payload'
@@ -44,8 +47,10 @@ jobs:
           & $iscc '/DAppVersion=0.1.0' "/DPayloadDir=$payload/Luma-windows-x64" "/DHelperPath=$helper" "/DOutputDir=$directory" ./packaging/windows/Luma.iss
           if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
           Copy-Item "$payload/Luma-windows-x64/Luma.scr" target/release/Luma.scr
-          ./scripts/test-installer.ps1 -SetupPath "$directory/Luma-0.1.0-Setup-x64.exe"
-          $checksums = foreach ($name in @('Luma-0.1.0-Setup-x64.exe', 'Luma-0.1.0-windows-x64.zip')) {
+          Copy-Item "$payload/Luma-windows-x64/Luma.scr" $directory
+          Copy-Item $helper $directory
+          ./scripts/test-installer.ps1 -SetupPath "$directory/Luma-0.1.0-Setup-x64.exe" -PreviousSetupPath "$directory/original-setup.exe"
+          $checksums = foreach ($name in @('Luma-0.1.0-Setup-x64.exe', 'Luma-0.1.0-windows-x64.zip', 'Luma.scr', 'luma-install-helper.exe')) {
             '{0}  {1}' -f (Get-FileHash "$directory/$name" -Algorithm SHA256).Hash.ToLowerInvariant(), $name
           }
           $checksums | Set-Content "$directory/SHA256SUMS.txt" -Encoding ascii
@@ -55,7 +60,8 @@ jobs:
         env:
           VT_API_KEY: ${{ secrets.VT_API_KEY }}
         run: |
-          $scan = ./scripts/submit-virustotal.ps1 -Tag v0.1.0 -Directory target/installer-review
+          $notes = Get-Content target/installer-review/existing-notes.md -Raw
+          $scan = ./scripts/submit-virustotal.ps1 -Tag v0.1.0 -Directory target/installer-review -ExistingNotes $notes -ReuseRecordedAnalyses -AdditionalFiles Luma.scr,luma-install-helper.exe
           Get-Content $scan.ReportPath | Add-Content $env:GITHUB_STEP_SUMMARY
           if ($scan.HasErrors) { throw 'Some VirusTotal requests failed; inspect reports.' }
       - uses: actions/upload-artifact@v7
