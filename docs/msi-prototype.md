@@ -70,7 +70,14 @@ each operation. MSI logs remain in `target/msi-tests-*`.
 - MSI major upgrade and downgrade rejection passed.
 - Uninstall removed the payload and installation metadata.
 - Current screen saver selection, production binary and settings remained unchanged.
-- VirusTotal upload is prepared; no result has been obtained for this MSI yet.
+- VirusTotal analysis completed on 2026-10-06 at 21:41:21 Europe/Zurich:
+  **0/51** detections. Microsoft and BitDefender returned Undetected.
+- DeepInstinct and SecureAge returned **Unable to process file type**;
+  Skyhigh (SWG) returned **Timeout**. These are the three engines that flagged
+  the original EXE. The MSI result therefore does not establish that those
+  detections have been withdrawn, or that Inno Setup caused them.
+
+[MSI VirusTotal report](https://www.virustotal.com/gui/file/aa3ec1a138386d8baddc32e2c17cb739b700cc8258c6a81c91d1e8f82cb3f3d2/detection).
 
 The evaluated v0.1.0 MSI is 2,527,232 bytes, SHA-256:
 
