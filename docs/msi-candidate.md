@@ -83,9 +83,27 @@ The integration tests passed these cases in the automated environment:
 Windows Installer's own rollback logs registry errors (including access denied and
 invalid owner). Subsequent uninstall can leave files because component ownership
 was lost. Test cleanup repairs the MSI before removing it. The full test command
-currently exits with a failure; it must pass outside the automated environment
-before promotion. Do not interpret the passing selection assertion alone as a
+currently exits with a failure. The user reproduced the same failure from Windows
+PowerShell 5.1 outside Codex on 2026-10-07, so it is not confined to the automated
+environment. Do not interpret the passing selection assertion alone as a
 successful uninstall rollback.
+
+A separate minimal per-user MSI installing only `LICENSE` reproduced the same
+failure when a deferred DLL action simply returned 1603. It did not run any Luma
+selection, restoration or migration code. Subsequent removal returned 0 but left
+the license file, with the same registry errors 5 and 1307 in rollback. This
+narrows the issue to the per-user MSI transaction/rollback path on this system;
+it does not establish whether the cause is Windows Installer, system state or
+packaging configuration. An earlier Type 19 immediate-error probe passed, but
+its uninstall error happened before the deferred transaction executed, so that
+result is not an equivalent rollback test. Changing failure impersonation and
+moving preparation before transaction initialization did not fix the problem.
+
+Next diagnostic: run the full test suite from an elevated PowerShell session and
+compare the rollback logs. Passing only with elevation would be evidence about
+privileges, not a resolution for an installer intended to work without elevation.
+Retain the failing assertions. Promotion remains blocked until the required
+installation context passes and Windows Screen Saver Settings is verified.
 
 The actual Inno test also exposed different registry visibility: PowerShell could
 read its registration while the native MSI action could not. The new guard stops
