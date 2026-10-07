@@ -23,6 +23,11 @@ execution, but integration tests observed the previous value after MSI exited.
 That implementation was removed. Its cause and reliable activation/restoration
 must be investigated before promoting MSI to the production installer.
 
+An expanded [native MSI candidate](msi-candidate.md) is now available for further
+validation. It reproduces differing registry visibility between the automated
+PowerShell and MSI contexts; the exact cause remains unresolved. Its new behavior
+and binaries are not covered by this prototype's VirusTotal report.
+
 ## Reproduce
 
 Prerequisites: Windows x64, PowerShell 7 and a .NET SDK. WiX 5.0.2 is pinned for
