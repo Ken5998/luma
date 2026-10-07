@@ -115,6 +115,13 @@ model before promotion, validate that model from a normal launch, and manually
 verify Windows Screen Saver Settings. No installer privilege or scope changes
 have been made merely to bypass the failing test.
 
+The user confirmed that the final installer must continue to work without
+administrator privileges. An additional trial with WiX `perUserOrMachine`
+(default per-user, explicit `ALLUSERS=2` and `MSIINSTALLPERUSER=1`) still failed
+the same non-elevated uninstall rollback assertion. That trial was reverted;
+the candidate remains strictly per-user. An elevated test pass therefore does
+not satisfy the chosen release requirements.
+
 The actual Inno test also exposed different registry visibility: PowerShell could
 read its registration while the native MSI action could not. The new guard stops
 this case before deleting old files. Inno migration remains unvalidated.
