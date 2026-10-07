@@ -83,7 +83,7 @@ The integration tests passed these cases in the automated environment:
 Windows Installer's own rollback logs registry errors (including access denied and
 invalid owner). Subsequent uninstall can leave files because component ownership
 was lost. Test cleanup repairs the MSI before removing it. The full test command
-currently exits with a failure. The user reproduced the same failure from Windows
+exits with a failure when run without elevation. The user reproduced the same failure from Windows
 PowerShell 5.1 outside Codex on 2026-10-07, so it is not confined to the automated
 environment. Do not interpret the passing selection assertion alone as a
 successful uninstall rollback.
@@ -99,11 +99,21 @@ its uninstall error happened before the deferred transaction executed, so that
 result is not an equivalent rollback test. Changing failure impersonation and
 moving preparation before transaction initialization did not fix the problem.
 
-Next diagnostic: run the full test suite from an elevated PowerShell session and
-compare the rollback logs. Passing only with elevation would be evidence about
-privileges, not a resolution for an installer intended to work without elevation.
-Retain the failing assertions. Promotion remains blocked until the required
-installation context passes and Windows Screen Saver Settings is verified.
+The user then ran the same full suite from an elevated PowerShell session on
+2026-10-07. Every assertion passed, including uninstall rollback, subsequent
+removal, protected production-file hashes and restoration of the initial selection.
+Logs: `target/msi-candidate-tests-20261007-215510`. The registry ownership/access
+errors reported by the non-elevated uninstall rollback are absent from that
+elevated run. A generic "Error in rollback skipped. Return: 5" remains at the end
+of injected-failure logs; functional assertions pass, so this warning is retained
+as a diagnostic rather than silently declaring the logs error-free.
+
+This comparison supports a privileges-related failure on this system. Passing
+only with elevation is not a resolution for an installer intended to work without
+elevation. Retain the failing assertions. Decide the supported installer privilege
+model before promotion, validate that model from a normal launch, and manually
+verify Windows Screen Saver Settings. No installer privilege or scope changes
+have been made merely to bypass the failing test.
 
 The actual Inno test also exposed different registry visibility: PowerShell could
 read its registration while the native MSI action could not. The new guard stops
