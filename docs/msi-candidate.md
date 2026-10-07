@@ -122,6 +122,45 @@ the same non-elevated uninstall rollback assertion. That trial was reverted;
 the candidate remains strictly per-user. An elevated test pass therefore does
 not satisfy the chosen release requirements.
 
+### Pure MSI reproduction
+
+Further isolation removes even the failure/rollback DLL from the comparison.
+`scripts/test-msi-rollback-probe.ps1` builds an MSI containing only `LICENSE`,
+one HKCU component key and a standard Type 19 error action. It explicitly runs
+`InstallExecute` on uninstall before raising the error. The runner checks that
+file removal actually executed; a pre-execution failure is not counted as a
+rollback test. Each build gets fresh product/upgrade/component identities.
+
+Both x64 and x86 packages reproduce the stranded-file failure without elevation.
+The x64 result also reproduces in Windows PowerShell 5.1, including portable mode
+with a prebuilt MSI. The observed host is Windows 11 26H2, build 26300.9550;
+`msi.dll` reports 5.0.26100.9549. These observations do not establish an OS-wide
+regression: a second Windows installation is still needed for comparison.
+
+```powershell
+# Builds with the existing local WiX tool, runs, and cleans up the file-only probe.
+./scripts/test-msi-rollback-probe.ps1
+./scripts/test-msi-rollback-probe.ps1 -Architecture x86
+# Build without installing, for an independent test environment.
+./scripts/test-msi-rollback-probe.ps1 -BuildOnly
+# A prebuilt probe requires only Windows PowerShell 5.1 or PowerShell 7.
+./scripts/test-msi-rollback-probe.ps1 -MsiPath ./Probe.msi
+```
+
+An expected reproduction exits with a `Confirmed` error after recording the
+stranded-file result. Cleanup first re-establishes MSI ownership with a normal
+installation, then removes the probe through MSI. It never deletes the file by
+hand to make removal assertions pass. Reports capture elevation, package hash,
+Windows/MSI versions, stage results, cleanup, and unchanged screen saver selection.
+
+An ignored, portable comparison ZIP was prepared at
+`target/debug-packages/Luma-MSI-Rollback-Probe.zip`. It contains the prebuilt x64
+MSI, runner, license, instructions and checksums, with no Rust/WiX dependency on
+the comparison PC. Run the included script from a non-elevated PowerShell.
+The tested portable report confirms `cleanupPassed=true` and
+`selectionUnchanged=true`. Do not include locally generated verbose logs in a
+public bundle without reviewing their local paths and user identifiers.
+
 The actual Inno test also exposed different registry visibility: PowerShell could
 read its registration while the native MSI action could not. The new guard stops
 this case before deleting old files. Inno migration remains unvalidated.
