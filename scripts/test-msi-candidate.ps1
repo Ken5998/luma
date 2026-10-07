@@ -21,7 +21,8 @@ $baseline = $null
 $script:installed = $null
 function Encode-Selection($Value) {
     if ($null -eq $Value) { return '-' }
-    '1:' + [Convert]::ToHexString([Text.Encoding]::Unicode.GetBytes($Value + [char]0)).ToLowerInvariant()
+    $bytes = [Text.Encoding]::Unicode.GetBytes($Value + [char]0)
+    '1:' + [BitConverter]::ToString($bytes).Replace('-', '').ToLowerInvariant()
 }
 function Run-Msi($Package, $Operation, [string[]]$Options = @(), $Expected = 0, $LegacyFolder = $noLegacy) {
     # msiexec /f drops extra properties. Use the equivalent install/repair form.
@@ -97,7 +98,8 @@ try {
 
     New-Item -ItemType Directory -Path $legacy -Force | Out-Null
     Copy-Item (Join-Path $payload 'Luma.scr') (Join-Path $legacy 'Luma.scr')
-    @{schema=1; previousScreenSaver=$other} | ConvertTo-Json | Set-Content (Join-Path $legacy 'installation.json')
+    $manifestJson = @{schema=1; previousScreenSaver=$other} | ConvertTo-Json
+    [IO.File]::WriteAllText((Join-Path $legacy 'installation.json'), $manifestJson, (New-Object Text.UTF8Encoding($false)))
     Set-Content (Join-Path $legacy 'keep.txt') 'User-owned file; migration must retain it.'
     $oldSelected = Encode-Selection (Join-Path $legacy 'Luma.scr')
     $r = Run-Msi $MsiPath '/i' @('LUMA_TEST_FAIL=1', "LUMA_TEST_SELECTION=$oldSelected") 1603 $legacy

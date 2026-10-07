@@ -55,7 +55,8 @@ For integration testing, build two dedicated test packages:
   -UpgradeMsiPath target/msi-candidate/0.1.3/test/Luma-0.1.3-MSI-Candidate-x64.msi
 ```
 
-Run the tests directly from a normal PowerShell session outside Codex's restricted
+The test runner supports Windows PowerShell 5.1 and PowerShell 7. Run the tests
+directly from a normal PowerShell session outside Codex's restricted
 execution environment, preferably in a dedicated Windows test account. They
 temporarily change the screen saver selection and deliberately fail transactions.
 They refuse an existing candidate directory and attempt to repair/remove the
