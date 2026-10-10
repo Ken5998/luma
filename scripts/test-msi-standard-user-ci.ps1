@@ -42,11 +42,12 @@ $process = $null
 $comparisonFolder = Join-Path $env:PUBLIC ('Luma-Msi-' + [guid]::NewGuid().ToString('N'))
 $artifactFolder = Join-Path $portable 'standard-user-results'
 $installerPolicy = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Installer'
-$previousPolicy = (Get-ItemProperty -LiteralPath $installerPolicy -ErrorAction SilentlyContinue).PSObject.Properties['DisableMSI']
+$priorPolicyProperties = Get-ItemProperty -LiteralPath $installerPolicy -ErrorAction SilentlyContinue
+$previousPolicy = if ($priorPolicyProperties) { $priorPolicyProperties.PSObject.Properties['DisableMSI'] } else { $null }
 try {
     # Server runner defaults block unmanaged per-user MSI (1625). Permit the test
     # without granting elevation; restore the original policy in finally.
-    $null = New-Item -Path $installerPolicy -Force
+    if (!(Test-Path -LiteralPath $installerPolicy)) { $null = New-Item -Path $installerPolicy -Force }
     $null = New-ItemProperty -LiteralPath $installerPolicy -Name DisableMSI -Value 0 -PropertyType DWord -Force
     Write-Output 'Disposable CI runner: unmanaged MSI permitted; AlwaysInstallElevated remains disabled.'
     $testUser = New-LocalUser -Name $accountName -Password $accountPassword -AccountNeverExpires -Description 'Temporary Luma MSI test account'
