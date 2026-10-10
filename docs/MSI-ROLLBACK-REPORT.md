@@ -1,9 +1,10 @@
-# Prepared upstream report: non-elevated per-user uninstall rollback
+# Published upstream report: non-elevated per-user uninstall rollback
 
-This report is prepared for review. It has not been posted to another project's
-issue tracker. It does not attribute the root cause to WiX or Windows Installer.
+Posted as Ken5998 on 2026-10-10 with the user's explicit authorization:
+[WiX issue #8574 comment](https://github.com/wixtoolset/issues/issues/8574#issuecomment-6101186682).
+The report does not attribute the root cause to WiX or Windows Installer.
 
-## Suggested comment on WiX issue #8574
+## Submitted comment on WiX issue #8574
 
 We have an independent, file-only reproduction related to the per-user rollback
 registration failures in this issue. Ours occurs during **uninstallation**:
@@ -80,14 +81,13 @@ For a portable comparison, build with -BuildOnly, copy Probe.msi together with
 test-msi-rollback-probe.ps1, then execute the latter with -MsiPath ./Probe.msi.
 No Rust, WiX or .NET SDK is needed on the comparison PC.
 
-Could you help identify an authoring difference that causes the engine to
-restore the registry registration under the wrong security context, or suggest
+Could you help determine whether an authoring difference could explain the
+registry restoration failures, or suggest
 an additional minimal comparison? We need per-user installation without an
 administrator prompt and do not want to disable rollback, alter MSI-owned
 registry permissions, or hide the failure with manual payload deletion.
-
 ## Privacy and publication
 
 Only the disposable-runner diagnostics are linked above. Local laptop/desktop
-logs contain user identifiers and paths and are not included in this report.
-Posting this comment to the WiX tracker requires the user's explicit authorization.
+logs contain user identifiers and paths and were not included in the comment.
+The posted body was read back from GitHub and verified against the submitted report.

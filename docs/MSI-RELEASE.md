@@ -172,5 +172,7 @@ compiler/engine/authoring cause. The comparison workflow correctly fails rather
 than treating the successful cleanup as a successful rollback test.
 
 No production installer or application code was changed by this investigation.
-[An upstream report is prepared](MSI-ROLLBACK-REPORT.md), but has not been sent to
-the WiX tracker. Publication remains blocked by the non-elevated rollback gate.
+[The upstream report](MSI-ROLLBACK-REPORT.md) was posted with explicit user
+authorization on 2026-10-10 as [a comment on WiX #8574](https://github.com/wixtoolset/issues/issues/8574#issuecomment-6101186682).
+The comment was read back and verified. No local user logs were uploaded.
+Publication remains blocked by the non-elevated rollback gate.
