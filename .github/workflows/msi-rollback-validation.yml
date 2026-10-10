@@ -1,0 +1,46 @@
+name: Compare MSI rollback without administrator rights
+on:
+  push:
+    branches: [codex/msi-release]
+    paths:
+      - .github/workflows/msi-rollback-validation.yml
+      - scripts/test-msi-standard-user-ci.ps1
+      - scripts/test-msi-rollback-probe.ps1
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compare:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Build isolated file-only MSI
+        run: |
+          . ./scripts/Msi.Common.ps1
+          $wix = Get-LumaWix
+          $package = ./scripts/test-msi-rollback-probe.ps1 -WixPath $wix.Compiler -BuildOnly
+          $portable = Join-Path $PWD 'target/standard-user-probe'
+          $null = New-Item -ItemType Directory -Path $portable
+          Copy-Item -LiteralPath $package -Destination (Join-Path $portable 'Probe.msi')
+          Copy-Item -LiteralPath scripts/test-msi-rollback-probe.ps1 -Destination $portable
+      - name: Run rollback as a fresh standard user
+        run: ./scripts/test-msi-standard-user-ci.ps1 -PortableDirectory target/standard-user-probe
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: msi-standard-user-${{ matrix.os }}
+          path: target/standard-user-probe/
+          if-no-files-found: error

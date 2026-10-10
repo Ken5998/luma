@@ -94,9 +94,13 @@ elevation.
 An independent laptop run on 2026-10-10 reproduced the same sequence with
 `Elevated=False`: install succeeded; the deliberately failed uninstall restored
 the file; subsequent removal returned 0 but left it present. Repair followed by
-removal then removed the file. The submitted console output does not include the
-laptop's Windows/MSI versions or registry rollback details; collect `result.json`
-and `failed-uninstall.log` from that existing run before requesting another test.
+removal then removed the file. The subsequently supplied report confirms the same
+Windows 11 26H2 build 26300.9550 and MSI 5.0.26100.9549 as the desktop, with
+`cleanupPassed=true` and `selectionUnchanged=true`. The supplied rollback log
+shows the same failed registry restoration, including error 1307 (invalid owner)
+for an Installer UpgradeCodes key, access-denied failures and skipped rollback
+operations. File restoration itself succeeds. The laptop probe SHA-256 is
+`4614c0495f5462617fb37b9498fba19f67f4c82668152f8d6c6ed7f181a7f261`.
 The laptop result rules out a defect confined to the development PC, but does not
 identify the underlying cause.
 
@@ -128,3 +132,16 @@ manually delete files to manufacture a successful removal result.
 - Production MSI compilation and embedded MSI/ZIP payload hash comparison pass. Rust reports one informational localized linker-output warning for the action DLL; application build has no warnings.
 - Non-elevated install, repair, normal removal, install rollback, upgrade, downgrade prevention, ZIP migration and failed migration rollback pass. Uninstall rollback followed by removal still fails as above; cleanup re-establishes MSI ownership and removes the test copy.
 - No final production antivirus submission or signing result is claimed. Real Inno migration passes on the elevated CI runner; non-elevated release acceptance remains open.
+
+### Standard-user comparison workflow
+
+`msi-rollback-validation.yml` builds the isolated file-only probe with the same
+pinned WiX 6.0.2 compiler and runs it on Windows Server 2022 and 2025 GitHub-hosted
+runners. The CI harness creates a temporary standard account, loads its profile,
+resolves its AppData paths, records its token and OS context, and rejects elevated
+installer policies. A successful probe also requires MSI logs without elevated
+execution properties. Diagnostics are retained as Actions artifacts on failure;
+the normal repair/removal cleanup is kept, never replaced with file deletion.
+The harness refuses to create accounts outside disposable GitHub-hosted runners.
+Server results provide comparison evidence; they do not replace acceptance on the
+supported Windows desktop builds. No publication is triggered by this workflow.
