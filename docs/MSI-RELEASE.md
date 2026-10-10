@@ -145,3 +145,10 @@ the normal repair/removal cleanup is kept, never replaced with file deletion.
 The harness refuses to create accounts outside disposable GitHub-hosted runners.
 Server results provide comparison evidence; they do not replace acceptance on the
 supported Windows desktop builds. No publication is triggered by this workflow.
+The first standard-user comparison run stopped before installation with 1625 on
+both Server runners. Its logs report `DisableMsi=1`: unmanaged non-elevated MSI
+is blocked by the runner policy. This is not a rollback result. The CI-only
+harness temporarily sets `DisableMSI=0` on the disposable VM and restores the
+previous policy afterward; it never enables `AlwaysInstallElevated`. No policy
+is changed by Luma or by the portable probe on a user's PC. See Microsoft's
+[DisableMSI policy documentation](https://learn.microsoft.com/en-us/windows/win32/msi/disablemsi).
