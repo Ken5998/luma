@@ -152,3 +152,25 @@ harness temporarily sets `DisableMSI=0` on the disposable VM and restores the
 previous policy afterward; it never enables `AlwaysInstallElevated`. No policy
 is changed by Luma or by the portable probe on a user's PC. See Microsoft's
 [DisableMSI policy documentation](https://learn.microsoft.com/en-us/windows/win32/msi/disablemsi).
+### Completed standard-user comparison, 2026-10-10
+
+The final [comparison run](https://github.com/Ken5998/luma/actions/runs/38078420379)
+reproduces the stranded-file failure under standard-user tokens on both Server
+images, after the unmanaged-install policy adjustment described above:
+
+| Environment | Windows build | msi.dll | Elevated | Stranded file | Cleanup |
+| --- | --- | --- | --- | --- | --- |
+| Windows Server 2022 Datacenter | 20348.5622 | 5.0.20348.5622 | False | Yes | Passed |
+| Windows Server 2025 Datacenter | 26100.33438 | 5.0.26100.33438 | False | Yes | Passed |
+
+Both reports confirm unchanged screen saver selection. Both rollback logs contain
+one invalid-owner note (1307), 79 access-denied notes (5) and 80 skipped rollback
+errors, matching the laptop's diagnostic signature. Install logs do not set
+MsiRunningElevated or Privileged. These results rule out a failure confined to the
+development machines or build 26300.9550; they still do not establish the underlying
+compiler/engine/authoring cause. The comparison workflow correctly fails rather
+than treating the successful cleanup as a successful rollback test.
+
+No production installer or application code was changed by this investigation.
+[An upstream report is prepared](MSI-ROLLBACK-REPORT.md), but has not been sent to
+the WiX tracker. Publication remains blocked by the non-elevated rollback gate.
