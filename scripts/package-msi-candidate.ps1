@@ -23,7 +23,8 @@ Copy-Item (Join-Path $source 'Luma.scr') $candidatePayload -Force
 Copy-Item (Join-Path $repo 'LICENSE') $candidatePayload -Force
 $nativeTarget = Join-Path $repo 'target/msi-native'
 $cargoArguments = @('build','--locked','--offline','--release','--manifest-path',(Join-Path $repo 'packaging/windows/msi/Cargo.toml'),'--target-dir',$nativeTarget)
-if ($TestHooks) { $cargoArguments += @('--features','test-hooks') }
+$features = if ($TestHooks) { 'candidate-identity,test-hooks' } else { 'candidate-identity' }
+$cargoArguments += @('--features',$features)
 $savedRustFlags = $env:RUSTFLAGS
 try {
     $env:RUSTFLAGS = (($savedRustFlags + ' -C target-feature=+crt-static').Trim())

@@ -9,9 +9,14 @@ The canvas is an illustrative palette study, not the Rust simulation.
 2. Set **Custom domain** to `luma.ksmvc.ch` and save.
 3. At the DNS provider create a CNAME record: `luma` -> `ken5998.github.io`.
 4. Once GitHub's DNS check and certificate provisioning complete, enable **Enforce HTTPS**.
-5. Push to main or run the workflow manually. The workflow builds the Windows ZIP,
-   places it in `downloads/`, then publishes the site. Download links resolve to
-   the package from the same commit as the page.
+5. Push to main or run the workflow manually. The workflow builds and tests the
+   Windows ZIP before publishing the site. Download buttons point to GitHub's
+   latest public release, where users choose the installer or ZIP and checksums.
+   Documentation-only changes therefore never replace a released download.
+
+The production MSI is being prepared on `codex/msi-release`. Until its acceptance
+checks pass and a release is published, the site continues to offer the existing
+release. The visual design and illustrative palette controls remain unchanged.
 
 The CNAME file documents the intended domain, but custom workflows still require
 setting the domain in GitHub Pages settings. Do not point the DNS CNAME at a URL

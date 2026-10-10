@@ -14,7 +14,7 @@ $version = $Tag.Substring(1)
 $directory = Join-Path (Split-Path $PSScriptRoot -Parent) ('target/virustotal/' + [Guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $directory
 
-gh release download $Tag --repo $Repository --dir $directory --pattern "Luma-$version-Setup-x64.exe" --pattern "Luma-$version-windows-x64.zip" --pattern SHA256SUMS.txt
+gh release download $Tag --repo $Repository --dir $directory --pattern "Luma-$version-Setup-x64.*" --pattern "Luma-$version-windows-x64.zip" --pattern SHA256SUMS.txt
 if ($LASTEXITCODE -ne 0) { throw 'Could not download all final release assets.' }
 $json = gh release view $Tag --repo $Repository --json body
 if ($LASTEXITCODE -ne 0) { throw 'Could not read release notes.' }

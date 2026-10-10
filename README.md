@@ -58,13 +58,23 @@ The script produces `target\release\Luma.exe` and `target\release\Luma.scr`, and
 
 Produces `target\distribution\Luma-windows-x64.zip` and its SHA-256 checksum. The ZIP includes the screensaver, installer, uninstaller, instructions, license, and checksums for its files. It uses the freshly built executable, even if an older development `.scr` is locked by Windows.
 
-For versioned release assets, install Inno Setup 6.7+ and run:
+The next installer is being prepared as a **per-user MSI**, reusing the native
+Rust activation and restoration implementation. It does not require administrator
+rights and retains appearance preferences. It has not replaced the published
+v0.1.0 EXE: independent rollback and legacy-migration acceptance checks remain.
+See [MSI release preparation](docs/MSI-RELEASE.md) for the evidence and checklist.
+
+For the prepared versioned MSI/ZIP assets, use PowerShell 7 and a .NET SDK for
+the pinned WiX build tool (neither is an MSI runtime prerequisite):
 
 ```powershell
-.\scripts\package-release.ps1 -IsccPath 'C:\path\to\ISCC.exe'
+.\scripts\package-release.ps1
 ```
 
-This creates the Setup executable, ZIP, and `SHA256SUMS.txt` under `target\releases\<version>`. Luma starts its own release numbering at v0.1.0, independent of the inherited Flux version.
+This creates `Luma-<version>-Setup-x64.msi`, the ZIP and `SHA256SUMS.txt` under
+`target\releases\<version>`, then verifies payloads and checksums. Historical
+Inno authoring remains available for old-release migration tests. Luma starts its
+own release numbering at v0.1.0, independent of the inherited Flux version.
 
 The [VirusTotal workflow](docs/VIRUSTOTAL.md) scans final release assets using the
 `VT_API_KEY` repository secret and adds report links to the release notes. It runs
@@ -185,7 +195,7 @@ Both graphical and script-based per-user installers are available.
 
 ## Website
 
-The English landing page lives in [`site/`](site/README.md), with interactive palette illustrations and an optional clock preview. The GitHub Actions workflow builds and tests the Windows package, then publishes the site and download together through GitHub Pages. See the [deployment instructions](site/README.md) for the custom domain `luma.ksmvc.ch`.
+The English landing page lives in [`site/`](site/README.md), with interactive palette illustrations and an optional clock preview. The GitHub Actions workflow builds and tests the Windows package, then publishes the site through GitHub Pages. Download buttons point to the latest public GitHub release, so a documentation update does not replace a released binary. See the [deployment instructions](site/README.md) for the custom domain `luma.ksmvc.ch`.
 
 ## Repository structure
 
@@ -196,7 +206,7 @@ The English landing page lives in [`site/`](site/README.md), with interactive pa
 | `site/` | Published website and interactive illustration |
 | `scripts/` | Build, package, and Windows integration checks |
 | `packaging/windows/` | Per-user installer and uninstaller |
-| `docs/` | Project artwork |
+| `docs/` | Artwork, release preparation and validation evidence |
 
 The workspace contains only the `luma` and `luma-desktop` packages. The inherited OpenGL/WASM targets, legacy browser demo, and Nix setup were removed; earlier versions remain in Git history. Original Flux credits and license notices are preserved.
 

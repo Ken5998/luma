@@ -15,7 +15,10 @@ function Get-LumaScanAssets([string] $Directory, [string] $Tag, [string[]] $Addi
     foreach ($name in $AdditionalFiles) {
         if ($name -cnotin @('Luma.scr', 'luma-install-helper.exe')) { throw 'Unexpected diagnostic artifact name.' }
     }
-    $assets = foreach ($name in (@("Luma-$version-Setup-x64.exe", "Luma-$version-windows-x64.zip") + $AdditionalFiles)) {
+    $installerNames = @("Luma-$version-Setup-x64.exe", "Luma-$version-Setup-x64.msi")
+    $installerEntries = @($installerNames | Where-Object { $candidate = $_; @($checksums | Where-Object { $_ -cmatch ('\A[0-9a-fA-F]{64}  ' + [regex]::Escape($candidate) + '\z') }).Count -gt 0 })
+    if ($installerEntries.Count -ne 1) { throw 'Checksums must identify exactly one installer (EXE or MSI).' }
+    $assets = foreach ($name in (@($installerEntries[0], "Luma-$version-windows-x64.zip") + $AdditionalFiles)) {
         $file = Get-Item -LiteralPath (Join-Path $Directory $name)
         if ($file.PSIsContainer -or $file.Length -eq 0 -or $file.Length -gt 650MB) {
             throw "Invalid release artifact size: $name."

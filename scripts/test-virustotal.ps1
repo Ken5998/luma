@@ -94,6 +94,18 @@ try {
     }
     Write-TestChecksums
     $assets = @(Get-LumaScanAssets $directory v0.1.0)
+    # MSI packaging uses the same validation and never accepts ambiguous installers.
+    $exe = Join-Path $directory 'Luma-0.1.0-Setup-x64.exe'
+    $msi = Join-Path $directory 'Luma-0.1.0-Setup-x64.msi'
+    Copy-Item -LiteralPath $exe -Destination $msi
+    $msiLine = '{0}  Luma-0.1.0-Setup-x64.msi' -f (Get-FileHash $msi).Hash.ToLowerInvariant()
+    Add-Content -LiteralPath (Join-Path $directory 'SHA256SUMS.txt') -Value $msiLine
+    Assert-Rejected { Get-LumaScanAssets $directory v0.1.0 } 'Ambiguous EXE/MSI assets were accepted.'
+    (Get-Content (Join-Path $directory 'SHA256SUMS.txt') | Where-Object { $_ -notlike '*-Setup-x64.exe' }) | Set-Content (Join-Path $directory 'SHA256SUMS.txt')
+    $msiAssets = @(Get-LumaScanAssets $directory v0.1.0)
+    Assert ($msiAssets[0].Name.EndsWith('.msi')) 'MSI installer was not selected.'
+    Remove-Item -LiteralPath $msi
+    Write-TestChecksums
     $multipart = New-VirusTotalMultipart $assets[0].File
     try {
         Assert ($multipart.Headers.ContentType.ToString() -match '^multipart/form-data; boundary=Luma[a-f0-9]+$') 'Invalid multipart boundary.'

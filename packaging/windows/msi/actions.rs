@@ -4,7 +4,10 @@ use std::{cell::RefCell, ffi::c_void, ptr};
 thread_local! { static USER_SID: RefCell<String> = const { RefCell::new(String::new()) }; }
 type Key = *mut c_void;
 const DESKTOP: &str = "Control Panel\\Desktop";
+#[cfg(feature = "candidate-identity")]
 const STATE: &str = "Software\\Luma\\WindowsInstaller";
+#[cfg(not(feature = "candidate-identity"))]
+const STATE: &str = "Software\\Luma\\Installer";
 const SELECTION: &str = "SCRNSAVE.EXE";
 const PREVIOUS: &str = "PreviousSelection";
 const LEGACY_KEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{AE5327E7-474B-47B6-BF01-2D5352A418AF}_is1";
@@ -279,8 +282,14 @@ fn legacy_original(folder: &str) -> Result<Value, String> {
         _ => Err("Invalid legacy screensaver selection".into()),
     }
 }
-fn legacy_uninstaller(folder: &str) -> Result<Option<String>, String> {
-    let location = read(LEGACY_KEY, "InstallLocation")?;
+fn legacy_uninstaller(handle: u32, folder: &str) -> Result<Option<String>, String> {
+    let snapshot_location = property(handle, "LEGACY_LOCATION")?;
+    let snapshot_command = property(handle, "LEGACY_UNINSTALL")?;
+    let location = if snapshot_location.is_empty() {
+        read(LEGACY_KEY, "InstallLocation")?
+    } else {
+        string(&snapshot_location)
+    };
     if location.is_none() {
         return Ok(None);
     }
@@ -290,7 +299,11 @@ fn legacy_uninstaller(folder: &str) -> Result<Option<String>, String> {
     ) {
         return Ok(None);
     }
-    let command = text(&read(LEGACY_KEY, "UninstallString")?)?;
+    let command = if snapshot_location.is_empty() {
+        text(&read(LEGACY_KEY, "UninstallString")?)?
+    } else {
+        snapshot_command
+    };
     let path = command.trim().trim_matches('"');
     let executable = std::path::Path::new(path);
     let name = executable
@@ -312,7 +325,22 @@ fn legacy_uninstaller(folder: &str) -> Result<Option<String>, String> {
     }
     Ok(Some(path.into()))
 }
+fn reject_reparse_ancestors(path: &std::path::Path) -> Result<(), String> {
+    use std::os::windows::fs::MetadataExt;
+    for entry in path.ancestors() {
+        match std::fs::symlink_metadata(entry) {
+            Ok(metadata) if metadata.file_attributes() & 0x400 != 0 => {
+                return Err("Redirected installation paths are not supported".into())
+            }
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+    Ok(())
+}
 fn probe_binary(path: &str) -> Result<(), String> {
+    reject_reparse_ancestors(std::path::Path::new(path))?;
     use std::os::windows::fs::OpenOptionsExt;
     if std::path::Path::new(path).exists() {
         std::fs::OpenOptions::new()
@@ -348,6 +376,19 @@ pub extern "system" fn Prepare(handle: u32) -> u32 {
         if folder.contains('|') || !std::path::Path::new(&folder).is_absolute() {
             return Err("Invalid installation directory".into());
         }
+        reject_reparse_ancestors(std::path::Path::new(&folder))?;
+        #[cfg(all(not(feature = "test-hooks"), not(feature = "candidate-identity")))]
+        {
+            let expected = std::path::Path::new(&property(handle, "LocalAppDataFolder")?)
+                .join("Luma")
+                .join("MSI");
+            if !same_path(
+                folder.trim_end_matches(['\\', '/']),
+                &expected.to_string_lossy(),
+            ) {
+                return Err("Use Luma's default per-user installation directory".into());
+            }
+        }
         let path = std::path::Path::new(&folder)
             .join("Luma.scr")
             .to_string_lossy()
@@ -371,7 +412,24 @@ pub extern "system" fn Prepare(handle: u32) -> u32 {
         let installed = !property(handle, "Installed")?.is_empty();
         let mut original = selected.clone();
         let legacy = property(handle, "LEGACYFOLDER")?;
+        if legacy.contains('|') || !std::path::Path::new(&legacy).is_absolute() {
+            return Err("Invalid legacy installation directory".into());
+        }
+        reject_reparse_ancestors(std::path::Path::new(&legacy))?;
+        #[cfg(all(not(feature = "test-hooks"), not(feature = "candidate-identity")))]
+        {
+            let expected = std::path::Path::new(&property(handle, "LocalAppDataFolder")?)
+                .join("Luma")
+                .join("Screensaver");
+            if !same_path(
+                legacy.trim_end_matches(['\\', '/']),
+                &expected.to_string_lossy(),
+            ) {
+                return Err("Only the default managed legacy installation can be migrated".into());
+            }
+        }
         let mut legacy_mode = "none";
+        let mut legacy_command = String::new();
         if !removing
             && !same_path(&folder, &legacy)
             && std::path::Path::new(&legacy).join("Luma.scr").is_file()
@@ -385,7 +443,9 @@ pub extern "system" fn Prepare(handle: u32) -> u32 {
             if text(&selected).is_ok_and(|s| same_path(&s, &legacy_binary)) {
                 original = legacy_previous;
             }
-            if let Some(uninstaller) = legacy_uninstaller(&legacy)? {
+            if let Some(uninstaller) = legacy_uninstaller(handle, &legacy)? {
+                legacy_command = uninstaller.clone();
+                #[cfg(feature = "candidate-identity")]
                 set(handle, "LEGACYUNINSTALLER", &uninstaller)?;
                 legacy_mode = "inno";
             } else {
@@ -409,7 +469,7 @@ pub extern "system" fn Prepare(handle: u32) -> u32 {
         set(
             handle,
             "CommitLegacy",
-            &format!("{sid}|{legacy_mode}|{legacy}"),
+            &format!("{sid}|{legacy_mode}|{legacy}|{legacy_command}|{path}"),
         )?;
         set(
             handle,
@@ -497,10 +557,58 @@ pub extern "system" fn CommitLegacy(handle: u32) -> u32 {
         USER_SID.with(|s| *s.borrow_mut() = fields.next().unwrap_or("").into());
         let mode = fields.next().ok_or("Missing migration mode")?;
         let folder = fields.next().ok_or("Missing legacy directory")?;
+        #[cfg(not(feature = "candidate-identity"))]
+        if mode == "inno" {
+            use std::os::windows::{fs::OpenOptionsExt, process::CommandExt};
+            let executable = fields.next().ok_or("Missing legacy uninstaller")?;
+            let selected_path = fields.next().ok_or("Missing MSI screensaver path")?;
+            reject_reparse_ancestors(std::path::Path::new(executable))?;
+            // Keep the exact validated uninstaller immutable while it executes.
+            let _guard = std::fs::OpenOptions::new()
+                .read(true)
+                .share_mode(1)
+                .open(executable)
+                .map_err(|e| e.to_string())?;
+            let selection = read(DESKTOP, SELECTION)?;
+            let mut process = std::process::Command::new(executable)
+                .args(["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"])
+                .creation_flags(0x08000000)
+                .spawn()
+                .map_err(|e| e.to_string())?;
+            drop(_guard); // Inno must be able to remove its own original uninstaller.
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(120);
+            loop {
+                if let Some(status) = process.try_wait().map_err(|e| e.to_string())? {
+                    if !status.success() {
+                        return Err("Luma MSI is installed, but the previous installer's removal failed. Remove the old entry through Windows Installed Apps.".into());
+                    }
+                    break;
+                }
+                if std::time::Instant::now() >= deadline {
+                    return Err("Luma MSI is installed, but legacy removal has not completed; no process was terminated.".into());
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+            // An Inno registry uninstall must not erase the newly selected saver.
+            if text(&selection).is_ok_and(|s| same_path(&s, selected_path))
+                && read(DESKTOP, SELECTION)?.is_none()
+            {
+                write(DESKTOP, SELECTION, &selection)?;
+            }
+            if std::path::Path::new(folder).join("Luma.scr").exists() {
+                return Err("The old Luma payload remains after migration. The new MSI installation is retained.".into());
+            }
+            log(
+                handle,
+                "Luma legacy Inno migration completed after MSI commit",
+            );
+            return Ok(());
+        }
         if mode != "zip" {
             return Ok(());
         }
         // Only a valid, managed legacy package is eligible. Never recurse or delete preferences.
+        reject_reparse_ancestors(std::path::Path::new(folder))?;
         legacy_original(folder)?;
         let binary = std::path::Path::new(folder)
             .join("Luma.scr")
@@ -519,6 +627,7 @@ pub extern "system" fn CommitLegacy(handle: u32) -> u32 {
             "Luma.log",
         ] {
             let file = std::path::Path::new(folder).join(name);
+            reject_reparse_ancestors(&file)?;
             if file.is_file() {
                 std::fs::remove_file(file).map_err(|e| e.to_string())?;
             }
@@ -570,4 +679,53 @@ pub extern "system" fn TestVerify(handle: u32) -> u32 {
 #[no_mangle]
 pub extern "system" fn FailForTest(_: u32) -> u32 {
     1603
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn snapshots_preserve_absence_and_arbitrary_type_bytes() {
+        for value in [
+            None,
+            Some((1, vec![65, 0, 0, 0])),
+            Some((3, vec![0, 255, 42])),
+            Some((4, vec![1, 0, 0, 0])),
+        ] {
+            assert_eq!(decode(&encode(&value)).unwrap(), value);
+        }
+    }
+    #[test]
+    fn corrupt_snapshots_fail_without_registry_calls() {
+        for value in ["", "1", "1:f", "bad:00", "1:zz", "1:é0"] {
+            assert!(decode(value).is_err(), "{value}");
+        }
+    }
+    #[test]
+    fn string_values_require_valid_utf16_and_string_kind() {
+        assert_eq!(text(&string("Luma 🖥")).unwrap(), "Luma 🖥");
+        for value in [
+            None,
+            Some((3, vec![65, 0])),
+            Some((1, vec![65])),
+            Some((1, vec![0, 216])),
+        ] {
+            assert!(text(&value).is_err());
+        }
+    }
+    #[test]
+    fn ownership_path_comparison_does_not_match_other_savers() {
+        assert!(same_path(
+            "\"C:/User/Luma/Luma.scr\"",
+            "c:\\user\\luma\\luma.scr"
+        ));
+        assert!(!same_path(
+            "C:/User/Luma/Luma.scr",
+            "C:/User/Luma2/Luma.scr"
+        ));
+        assert!(!same_path(
+            "C:/User/Luma/Luma.scr",
+            "C:/User/Luma/Luma.scr.exe"
+        ));
+    }
 }

@@ -1,0 +1,104 @@
+# Production MSI release preparation
+
+Luma's next packaging release is being prepared on `codex/msi-release`. It is
+not published yet. Public downloads remain v0.1.0 until acceptance passes.
+No automatic application updater is introduced by this installer work.
+
+## Design
+
+The existing native Rust selection/migration actions are reused. Windows
+Installer owns the two payload files (`Luma.scr` and `LICENSE`). The production
+MSI installs in `%LOCALAPPDATA%\Luma\MSI`, without administrator rights or UAC.
+It has a separate upgrade family from the experimental prototype/candidate:
+`A51E59BE-C086-48C8-8BDA-B382C44316AE`. Test hooks are absent from production.
+WiX and its UI extension are pinned at 6.0.2; the native DLL uses a static CRT.
+The [WiX maintenance-fee policy](https://docs.firegiant.com/wix/whatsnew/)
+requires payment for revenue-generating use; Luma is an individual, noncommercial
+open-source project. Reassess the tool policy if that changes.
+
+Preferences at `%LOCALAPPDATA%\Luma\settings.json` are never installed, removed
+or rewritten. Activation changes only the executable selection, not idle timeout,
+password requirements or activation. Selection type and bytes are backed up and
+rolled back. Removal restores the original selection only when Luma is still
+selected. Repair and upgrades preserve a newer user selection.
+
+Managed ZIP/Inno copies in the default legacy directory are migrated. Inno
+registration is captured with native AppSearch, including the interactive client
+registry view; the validated, directory-bound uninstaller runs only after MSI
+commit. It is held read-only until process startup, then released so Inno can remove its own file. It is waited for and never forcibly killed.
+Failure after commit is reported and can leave both installations present;
+the old uninstaller is not part of Windows Installer's atomic transaction.
+Unmanaged/invalid metadata or unreadable Inno registration fails before mutation.
+Unknown legacy files remain. Reparse installation paths and custom production
+install locations are rejected. Locked executables fail with instructions to
+close the saver, preview and settings. Restart Manager is disabled.
+
+ZIP installation remains supported independently. Do not use Install.cmd to
+replace an MSI-owned file. Use Windows Installed Apps for MSI removal and a
+newer MSI for updates. Open Windows Screen Saver Settings after installation
+and check selection, preview, Settings, wait time and sign-in preference.
+
+## Build and verify
+
+Windows x64, stable Rust, PowerShell 7 and a .NET SDK (WiX build tool only):
+
+```powershell
+cargo test --locked --release -p luma -p luma-desktop
+./scripts/test-deployment.ps1
+./scripts/test-uninstall-handoff.ps1
+./scripts/test-virustotal.ps1
+./scripts/package-release.ps1
+```
+
+The user's PC needs neither Rust nor .NET for the MSI. The settings dialog still
+uses Windows PowerShell. `package-release.ps1` builds the app, ZIP and MSI using
+the existing pipeline, then verifies MSI metadata, exact ZIP contents and hashes.
+There is no production dependency on Inno Setup.
+
+The `Validate prepared MSI release` workflow builds/reviews the branch on a
+disposable Windows runner, explicitly recording whether it is elevated. Such a
+pass does not replace non-elevated acceptance. No review artifact is published
+as a release or submitted to VirusTotal automatically.
+
+Only after all acceptance checks pass, commit the release-ready documentation,
+create the annotated `v0.1.1` tag on the reviewed source and push it. The `Build
+draft MSI release` workflow validates the tag/version, runs tests, packages and
+creates a **draft only**, refusing any existing release. Review the final Actions
+hashes, obtain consent for new public antivirus uploads, and publish the draft
+after final acceptance. No tag or existing release is overwritten. Historical Inno files remain
+for migration/reproduction of old releases.
+
+## Required acceptance before publication
+
+- [ ] Non-elevated install, repair, upgrade, downgrade rejection and uninstall.
+- [ ] Install rollback and uninstall rollback followed by successful removal.
+- [ ] Managed ZIP migration, migration rollback and unknown-file preservation.
+- [ ] Real v0.1.0 Inno migration and original selection restoration.
+- [ ] Native Windows Screen Saver Settings selects the installed copy; preview
+  and Settings work. All palettes, clock and multi-monitor exit still work.
+- [ ] Existing appearance preferences remain byte-for-byte unchanged.
+- [ ] Wait time, activation and sign-in preference remain unchanged.
+- [ ] Final MSI and ZIP SHA-256 hashes verified; antivirus results refer to those
+  exact files. Unsigned packages must never be described as code signed.
+- [ ] README, website and release notes describe the published package accurately.
+
+### Blocking evidence, 2026-10-10
+
+The pure file-only rollback probe still fails on this Windows 11 26H2 host,
+build 26300.9550, MSI 5.0.26100.9549, without elevation. A failed uninstall restores
+the file, but a subsequent successful uninstall strands it. The runner repairs
+ownership and then removes the probe; cleanup passes and selection is unchanged.
+This occurs without any Luma DLL. It does not prove an OS-wide issue or justify
+elevation. Independent non-elevated Windows validation remains required.
+
+See [candidate evidence](msi-candidate.md) and
+`scripts/test-msi-rollback-probe.ps1`. Never weaken the failing assertion or
+manually delete files to manufacture a successful removal result.
+
+### Local validation of prepared 0.1.1
+
+- All 64 application tests pass, including the 11 GPU tests and embedded settings form normally ignored. Four native MSI unit tests also pass.
+- Deployment, registered-uninstaller handoff, offline VirusTotal transport tests and preview resize/shutdown pass.
+- Production MSI compilation and embedded MSI/ZIP payload hash comparison pass. Rust reports one informational localized linker-output warning for the action DLL; application build has no warnings.
+- Non-elevated install, repair, normal removal, install rollback, upgrade, downgrade prevention, ZIP migration and failed migration rollback pass. Uninstall rollback followed by removal still fails as above; cleanup re-establishes MSI ownership and removes the test copy.
+- No final production antivirus submission or signing result is claimed. Real Inno migration and independent non-elevated acceptance remain open.

@@ -1,0 +1,65 @@
+name: Validate prepared MSI release
+on:
+  push:
+    branches: [codex/msi-release]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: msi-validation-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Set up Rust
+        run: rustup default stable
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Test application and deployment boundaries
+        run: |
+          cargo test --locked --release -p luma -p luma-desktop
+          if ($LASTEXITCODE -ne 0) { throw 'Application tests failed.' }
+          ./scripts/test-deployment.ps1
+          ./scripts/test-uninstall-handoff.ps1
+          ./scripts/test-virustotal.ps1
+          cargo test --locked --manifest-path packaging/windows/msi/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { throw 'Native action tests failed.' }
+      - name: Build and verify final MSI and ZIP
+        run: ./scripts/package-release.ps1
+      - name: Test native MSI integration on a disposable runner
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $payload = Join-Path $PWD 'target/integration-payload'
+          Expand-Archive target/releases/0.1.1/Luma-0.1.1-windows-x64.zip $payload
+          $payload = Join-Path $payload 'Luma-windows-x64'
+          ./scripts/package-msi.ps1 -Version 0.1.1 -PayloadDirectory $payload -TestHooks
+          ./scripts/package-msi.ps1 -Version 0.1.2 -PayloadDirectory $payload -TestHooks
+          $identity = [Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
+          "Runner is elevated: $($identity.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)). A pass here does not establish non-elevated behavior." | Add-Content $env:GITHUB_STEP_SUMMARY
+          $original = Join-Path $PWD 'target/legacy-setup'
+          $null = New-Item -ItemType Directory -Path $original
+          gh release download v0.1.0 --repo Ken5998/luma --pattern Luma-0.1.0-Setup-x64.exe --dir $original
+          if ($LASTEXITCODE -ne 0) { throw 'Original installer download failed.' }
+          $original = Join-Path $original 'Luma-0.1.0-Setup-x64.exe'
+          if ((Get-FileHash $original).Hash.ToLowerInvariant() -ne 'e0361bffc45347e45bb9721e07adb88c6fbd5556e9e164c7264f3b2a19861fe4') { throw 'Original release hash mismatch.' }
+          ./scripts/test-msi-release.ps1 -MsiPath target/msi/0.1.1/test/Luma-0.1.1-Setup-x64.msi -UpgradeMsiPath target/msi/0.1.2/test/Luma-0.1.2-Setup-x64.msi -PayloadDirectory $payload -LegacySetupPath $original
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: luma-msi-release-review
+          path: |
+            target/releases/0.1.1/Luma-0.1.1-Setup-x64.msi
+            target/releases/0.1.1/Luma-0.1.1-windows-x64.zip
+            target/releases/0.1.1/SHA256SUMS.txt
+            target/msi-release-tests-*/
+          if-no-files-found: error

@@ -3,3 +3,5 @@
 
 # Download populated by the Pages workflow or local packaging
 /site/downloads/
+
+/packaging/windows/msi/target/
