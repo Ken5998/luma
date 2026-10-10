@@ -1,5 +1,14 @@
 # Installer detection investigation
 
+## Public download status
+
+The old v0.1.0 Inno Setup EXE is withdrawn from public downloads following the
+recorded antivirus detections. Its source, hashes and historical investigation
+remain available. This withdrawal does not establish a vendor-confirmed false
+positive or claim that the MSI fixes every classification. v0.1.1 is a pre-release:
+ZIP recommended, MSI experimental with its [rollback limitation](MSI-RELEASE.md).
+Reports for the final v0.1.1 artifacts are published in that release's notes.
+
 ## Baseline, 2026-09-16
 
 The released v0.1.0 installer, SHA-256
@@ -19,8 +28,9 @@ Links: [original setup report](https://www.virustotal.com/gui/file/e0361bffc4534
 
 ## Tested changes on `codex/installer-trust`
 
-These are experimental builds, not a confirmed antivirus fix. Production retains
+These are experimental builds, not a confirmed antivirus fix. At the time of these experiments, production retained
 the original installer implementation pending the classification review. The
+2026-10-10 distribution decision above supersedes that temporary policy. The
 reporting improvements and registered-uninstaller lookup are integrated on
 `main` independently without shipping an unproven replacement.
 

@@ -1,7 +1,8 @@
 # VirusTotal release reports
 
 The **Scan release with VirusTotal** GitHub Actions workflow scans the final
-`Luma-<version>-Setup-x64.exe` and `Luma-<version>-windows-x64.zip` attached to a
+`Luma-<version>-Setup-x64.msi` (or the historical EXE) and
+`Luma-<version>-windows-x64.zip` attached to a
 GitHub release. Configure `VT_API_KEY` as a repository Actions secret. The key is
 passed only to the scanning step and is never written to reports.
 
@@ -10,15 +11,15 @@ passed only to the scanning step and is never written to reports.
 - New releases: upload both packages and `SHA256SUMS.txt` before publishing.
   The `release: published` event starts the scan automatically after publication.
 - Existing releases or drafts: open **Actions → Scan release with VirusTotal →
-  Run workflow**, select `main`, and enter the release tag, for example `v0.1.0`.
+  Run workflow**, select the reviewed branch (normally `main`), and enter the release tag, for example `v0.1.1`.
   This also allows a maintainer to scan a draft before publishing it.
 - If results are still pending, run again with **Refresh recorded analyses
   without uploading the files again** enabled. This looks up the recorded
   analysis IDs only when their filenames and SHA-256 hashes match the assets.
 - If an upload failed or no analysis ID is recorded, retry with that option off.
 
-Adding the secret alone does not scan an existing release. The workflow must
-first be committed and pushed to `main`, then dispatched for that release.
+Adding the secret alone does not scan an existing release. The workflow must exist on the default branch before it can be dispatched;
+the selected reviewed branch supplies the scanning implementation.
 Releases published by another workflow using `GITHUB_TOKEN` do not trigger a
 second workflow: that release workflow must explicitly invoke the scanning
 script or dispatch this workflow instead.

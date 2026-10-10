@@ -15,6 +15,13 @@ Your palette, speed, size, and quality preferences are preserved.
 The installer selects Luma but does not alter the activation setting,
 wait time, or password requirement. Review these in the Windows panel.
 
+Switching from an installer
+--------------------------
+If you installed with the old graphical EXE, remove that copy through Windows
+Installed Apps before running Install.cmd from this ZIP. Appearance preferences
+are kept. MSI-owned files are managed by MSI, not by these ZIP scripts; remove
+an MSI through Windows Installed Apps before switching to ZIP.
+
 Configure
 ---------
 Click Settings in Windows Screen Saver Settings to change Luma's appearance.

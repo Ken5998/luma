@@ -1,7 +1,9 @@
 # Production MSI release preparation
 
-Luma's next packaging release is being prepared on `codex/msi-release`. It is
-not published yet. Public downloads remain v0.1.0 until acceptance passes.
+Luma v0.1.1 is an experimental pre-release: ZIP recommended, MSI for testing.
+On 2026-10-10 the maintainer explicitly chose pre-release publication with the
+known rollback limitation disclosed, and withdrawal of the old Inno EXE.
+This does not satisfy or waive the stable MSI acceptance gate.
 No automatic application updater is introduced by this installer work.
 
 ## Design
@@ -60,15 +62,17 @@ disposable Windows runner, explicitly recording whether it is elevated. Such a
 pass does not replace non-elevated acceptance. No review artifact is published
 as a release or submitted to VirusTotal automatically.
 
-Only after all acceptance checks pass, commit the release-ready documentation,
-create the annotated `v0.1.1` tag on the reviewed source and push it. The `Build
-draft MSI release` workflow validates the tag/version, runs tests, packages and
-creates a **draft only**, refusing any existing release. Review the final Actions
-hashes, obtain consent for new public antivirus uploads, and publish the draft
-after final acceptance. No tag or existing release is overwritten. Historical Inno files remain
+The maintainer authorized a v0.1.1 pre-release with the known limitation clearly
+disclosed and ZIP recommended, rather than stable MSI promotion. Create the
+annotated `v0.1.1` tag on the reviewed source and push it. `Build draft Windows
+release` validates the tag/version, runs tests, packages and creates a **draft,
+pre-release only** for v0.1.1, refusing any existing release. Verify the final
+Actions hashes, scan those exact files with the authorized VirusTotal workflow,
+and publish while retaining the pre-release flag. No clean scan or completed
+stable MSI acceptance is implied by experimental publication. No tag or existing release is overwritten. Historical Inno files remain
 for migration/reproduction of old releases.
 
-## Required acceptance before publication
+## Required acceptance before stable MSI promotion
 
 - [ ] Non-elevated install, repair, upgrade, downgrade rejection and uninstall.
 - [ ] Install rollback and uninstall rollback followed by successful removal.
@@ -176,3 +180,18 @@ No production installer or application code was changed by this investigation.
 authorization on 2026-10-10 as [a comment on WiX #8574](https://github.com/wixtoolset/issues/issues/8574#issuecomment-6101186682).
 The comment was read back and verified. No local user logs were uploaded.
 Publication remains blocked by the non-elevated rollback gate.
+## Inno withdrawal and pre-release distribution
+
+Retire only the public v0.1.0 Setup EXE after a hash-verified local backup has
+been retained. Keep the v0.1.0 ZIP, historical SHA-256 records, tag and detection
+investigation. Update its release notes to remove the installer recommendation.
+Do not rehost the retired EXE as an alternative public fixture. Future automated
+MSI validation no longer downloads it; the recorded real migration pass remains
+available, and a retained local installer may be supplied to the integration
+runner with -LegacySetupPath.
+
+The website explicitly targets the v0.1.1 ZIP and links the experimental MSI
+release notes: releases/latest continues to resolve the older stable release.
+Existing Inno users switching to ZIP remove their graphical installation first;
+appearance preferences survive. MSI users manage MSI files through Windows
+Installer rather than overwriting them with ZIP scripts.

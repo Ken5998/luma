@@ -21,18 +21,31 @@ Luma is an independent MIT-licensed fork, currently under development.
 
 ## Install, update, or uninstall
 
-Release packages offer two options:
+**[v0.1.1 is a pre-release](https://github.com/Ken5998/luma/releases/tag/v0.1.1). The ZIP is the recommended download; the MSI is experimental.**
 
-- **`Luma-<version>-Setup-x64.exe`**: a graphical installer for the current user, with an entry in Windows Installed Apps. No administrator rights are needed.
-- **`Luma-<version>-windows-x64.zip`**: the screensaver with PowerShell install/uninstall scripts.
+- **[Luma-0.1.1-windows-x64.zip](https://github.com/Ken5998/luma/releases/download/v0.1.1/Luma-0.1.1-windows-x64.zip)**: extract all files and run **Install.cmd**. No administrator rights are needed.
+- **[Luma-0.1.1-Setup-x64.msi](https://github.com/Ken5998/luma/releases/download/v0.1.1/Luma-0.1.1-Setup-x64.msi)**: experimental graphical per-user installer with an Installed Apps entry.
+- **[SHA256SUMS.txt](https://github.com/Ken5998/luma/releases/download/v0.1.1/SHA256SUMS.txt)**: checksums for these exact packages. Packages are unsigned; current antivirus reports are linked in the release notes.
 
-Both use `%LOCALAPPDATA%\Luma\Screensaver` and preserve appearance preferences. Close Luma and Windows Screen Saver Settings before installing or updating. The graphical installer also supports upgrades from the script-based installation. If you installed with Setup, uninstall from Windows Installed Apps or run `Uninstall.cmd` to open the registered uninstaller.
+The old Inno Setup EXE is withdrawn from public downloads following antivirus detections. The historical findings remain in [the installer investigation](docs/INSTALLER-TRUST.md); they are not a confirmed vendor classification correction.
 
-Extract the Windows ZIP, close Luma and Windows Screen Saver Settings, then double-click **Install.cmd**. It installs for the current user in `%LOCALAPPDATA%\Luma\Screensaver`, selects Luma, and opens Windows Screen Saver Settings. Check the wait time and sign-in preference, then click Apply. No administrator rights are needed.
+### Recommended ZIP installation
 
-Run Install.cmd from a newer extracted package to update. Existing appearance preferences are kept. If the executable is in use, close the screensaver, preview, and settings window, then retry.
+Close Luma and Windows Screen Saver Settings. Extract the Windows ZIP, then double-click **Install.cmd**. It installs for the current user in `%LOCALAPPDATA%\Luma\Screensaver`, selects Luma, and opens Windows Screen Saver Settings. Check the wait time and sign-in preference, then click Apply.
 
-To uninstall, run **Uninstall.cmd** from the package or installation folder. It restores the previous screensaver if that file still exists and Luma is still selected. A newer screensaver choice is left unchanged. `%LOCALAPPDATA%\Luma\settings.json` is preserved.
+Run Install.cmd from a newer extracted package to update an existing ZIP installation. Appearance preferences are kept. If the executable is in use, close the screensaver, preview, and settings window, then retry.
+
+If you installed v0.1.0 with the old graphical EXE, first remove that installation through Windows Installed Apps, then run Install.cmd from the new ZIP. Your appearance preferences at `%LOCALAPPDATA%\Luma\settings.json` are preserved. Close Luma and the Windows preview before switching package types.
+
+To uninstall a ZIP installation, run **Uninstall.cmd** from the package or installation folder. It restores the previous screensaver if that file still exists and Luma is still selected. A newer screensaver choice is left unchanged. The preferences file is preserved.
+
+### Experimental MSI
+
+The MSI installs in `%LOCALAPPDATA%\Luma\MSI` and preserves appearance preferences. It supports managed default-directory ZIP/Inno migration, repair, upgrades and removal through Windows Installed Apps. Keep using MSI for updates/removal of an MSI installation; ZIP scripts do not manage MSI-owned files.
+
+**Known limitation:** if an MSI uninstall fails and rolls back, a subsequent uninstall can return success while leaving its files. The file is restored, but Windows Installer's registration is not fully recovered. This was reproduced without administrator privileges on two Windows 11 PCs and two Windows Server test environments, including a file-only package without any Luma DLL. Normal install/removal tests pass, but the rollback defect remains unresolved.
+
+In the tested recovery, running the same MSI again to reinstall/repair restores ownership; subsequent removal then succeeds. Keep the MSI if you try it. Do not manually delete Windows Installer registry entries. [Full evidence and upstream report](docs/MSI-RELEASE.md). The MSI is offered for testing, not as the recommended stable installation.
 
 The scripts change only the current user's screensaver executable selection. They do not change activation, idle timeout, or password requirements. Windows applies the executable selection on its next screensaver launch ([Microsoft documentation](https://learn.microsoft.com/en-us/windows/win32/devnotes/scrnsave-exe)). Organization policies may override the selection.
 
@@ -58,13 +71,13 @@ The script produces `target\release\Luma.exe` and `target\release\Luma.scr`, and
 
 Produces `target\distribution\Luma-windows-x64.zip` and its SHA-256 checksum. The ZIP includes the screensaver, installer, uninstaller, instructions, license, and checksums for its files. It uses the freshly built executable, even if an older development `.scr` is locked by Windows.
 
-The next installer is being prepared as a **per-user MSI**, reusing the native
+The experimental installer is a **per-user MSI**, reusing the native
 Rust activation and restoration implementation. It does not require administrator
-rights and retains appearance preferences. It has not replaced the published
-v0.1.0 EXE: independent rollback and legacy-migration acceptance checks remain.
+rights and retains appearance preferences. It is offered in v0.1.1 as an experimental pre-release; stable MSI promotion
+remains blocked by the documented non-elevated rollback defect.
 See [MSI release preparation](docs/MSI-RELEASE.md) for the evidence and checklist.
 
-For the prepared versioned MSI/ZIP assets, use PowerShell 7 and a .NET SDK for
+For versioned MSI/ZIP assets, use PowerShell 7 and a .NET SDK for
 the pinned WiX build tool (neither is an MSI runtime prerequisite):
 
 ```powershell

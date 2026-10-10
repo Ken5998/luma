@@ -46,13 +46,10 @@ jobs:
           ./scripts/package-msi.ps1 -Version 0.1.2 -PayloadDirectory $payload -TestHooks
           $identity = [Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
           "Runner is elevated: $($identity.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)). A pass here does not establish non-elevated behavior." | Add-Content $env:GITHUB_STEP_SUMMARY
-          $original = Join-Path $PWD 'target/legacy-setup'
-          $null = New-Item -ItemType Directory -Path $original
-          gh release download v0.1.0 --repo Ken5998/luma --pattern Luma-0.1.0-Setup-x64.exe --dir $original
-          if ($LASTEXITCODE -ne 0) { throw 'Original installer download failed.' }
-          $original = Join-Path $original 'Luma-0.1.0-Setup-x64.exe'
-          if ((Get-FileHash $original).Hash.ToLowerInvariant() -ne 'e0361bffc45347e45bb9721e07adb88c6fbd5556e9e164c7264f3b2a19861fe4') { throw 'Original release hash mismatch.' }
-          ./scripts/test-msi-release.ps1 -MsiPath target/msi/0.1.1/test/Luma-0.1.1-Setup-x64.msi -UpgradeMsiPath target/msi/0.1.2/test/Luma-0.1.2-Setup-x64.msi -PayloadDirectory $payload -LegacySetupPath $original
+          # The legacy Inno EXE is retired from public downloads. The actual
+          # migration pass is recorded in run 38076913244; retained local copies
+          # can still be supplied with -LegacySetupPath for migration regression.
+          ./scripts/test-msi-release.ps1 -MsiPath target/msi/0.1.1/test/Luma-0.1.1-Setup-x64.msi -UpgradeMsiPath target/msi/0.1.2/test/Luma-0.1.2-Setup-x64.msi -PayloadDirectory $payload
       - uses: actions/upload-artifact@v7
         if: always()
         with:
