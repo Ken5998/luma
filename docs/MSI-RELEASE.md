@@ -89,7 +89,33 @@ build 26300.9550, MSI 5.0.26100.9549, without elevation. A failed uninstall rest
 the file, but a subsequent successful uninstall strands it. The runner repairs
 ownership and then removes the probe; cleanup passes and selection is unchanged.
 This occurs without any Luma DLL. It does not prove an OS-wide issue or justify
-elevation. Independent non-elevated Windows validation remains required.
+elevation.
+
+An independent laptop run on 2026-10-10 reproduced the same sequence with
+`Elevated=False`: install succeeded; the deliberately failed uninstall restored
+the file; subsequent removal returned 0 but left it present. Repair followed by
+removal then removed the file. The submitted console output does not include the
+laptop's Windows/MSI versions or registry rollback details; collect `result.json`
+and `failed-uninstall.log` from that existing run before requesting another test.
+The laptop result rules out a defect confined to the development PC, but does not
+identify the underlying cause.
+
+A fresh file-only probe built with WiX 6.0.2 and `InstallerVersion=200` also
+reproduced the failure without elevation on the development PC; cleanup passed.
+Lowering the minimum engine version alone did not resolve it.
+
+[WiX issue #8574](https://github.com/wixtoolset/issues/issues/8574) reports a related
+per-user rollback registration failure. That report concerns failed installation,
+while this probe concerns failed uninstallation and subsequent removal. Its
+existence is supporting context, not proof of a shared cause or a verified fix.
+No installer downloaded from that issue was executed: its MSI metadata was only
+read for comparison.
+
+The full [GitHub validation run](https://github.com/Ken5998/luma/actions/runs/38076913244)
+passed, including real v0.1.0 Inno migration and removal after uninstall rollback.
+Downloaded MSI logs explicitly record `MsiRunningElevated=1`, `Privileged=1` and
+`AdminUser=1`, so this pass does not establish the required non-elevated behavior.
+The no-administrator publication gate remains open.
 
 See [candidate evidence](msi-candidate.md) and
 `scripts/test-msi-rollback-probe.ps1`. Never weaken the failing assertion or
@@ -101,4 +127,4 @@ manually delete files to manufacture a successful removal result.
 - Deployment, registered-uninstaller handoff, offline VirusTotal transport tests and preview resize/shutdown pass.
 - Production MSI compilation and embedded MSI/ZIP payload hash comparison pass. Rust reports one informational localized linker-output warning for the action DLL; application build has no warnings.
 - Non-elevated install, repair, normal removal, install rollback, upgrade, downgrade prevention, ZIP migration and failed migration rollback pass. Uninstall rollback followed by removal still fails as above; cleanup re-establishes MSI ownership and removes the test copy.
-- No final production antivirus submission or signing result is claimed. Real Inno migration and independent non-elevated acceptance remain open.
+- No final production antivirus submission or signing result is claimed. Real Inno migration passes on the elevated CI runner; non-elevated release acceptance remains open.
