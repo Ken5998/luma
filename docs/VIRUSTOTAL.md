@@ -10,6 +10,8 @@ passed only to the scanning step and is never written to reports.
 
 - New releases: upload both packages and `SHA256SUMS.txt` before publishing.
   The `release: published` event starts the scan automatically after publication.
+  Matching recorded analysis IDs are reused when the filename and SHA-256 still
+  match, so scanning a draft first does not upload the same files again.
 - Existing releases or drafts: open **Actions → Scan release with VirusTotal →
   Run workflow**, select the reviewed branch (normally `main`), and enter the release tag, for example `v0.1.1`.
   This also allows a maintainer to scan a draft before publishing it.

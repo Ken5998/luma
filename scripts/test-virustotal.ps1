@@ -68,6 +68,7 @@ function gh {
         view {
             $global:lumaVtTestGitHub.Views++
             $body = if ($global:lumaVtTestGitHub.Views -eq 1) { 'Original release notes.' } else { 'Original release notes. Maintainer edit during scan.' }
+            if ($global:lumaVtTestGitHub.RecordedNotes) { $body += [Environment]::NewLine + $global:lumaVtTestGitHub.RecordedNotes }
             @{ body = $body } | ConvertTo-Json
         }
         edit {
@@ -155,7 +156,11 @@ try {
     Assert-Rejected { Merge-VirusTotalNotes '<!-- luma-virustotal:start -->' $report } 'Broken report markers were accepted.'
 
     $global:lumaVtTestScenario = 'completed'
+    $global:lumaVtTestGitHub.RecordedNotes = $report
+    $global:lumaVtTestCalls.Clear()
     & "$PSScriptRoot/scan-release.ps1" -Tag v0.1.0 -Repository test/luma
+    Assert ($global:lumaVtTestCalls.Count -eq 2) 'Release scan did not reuse both matching analyses.'
+    Assert (@($global:lumaVtTestCalls | Where-Object Method -eq Post).Count -eq 0) 'Publication uploaded previously scanned release assets again.'
     Assert ($global:lumaVtTestGitHub.Edited.Contains('Maintainer edit during scan.')) 'End-to-end scan overwrote a concurrent note edit.'
     Assert ($global:lumaVtTestGitHub.Edited.Contains('1 malicious, 2 suspicious')) 'End-to-end scan did not add actual results.'
     Assert (($global:lumaVtTestGitHub.Calls -join ',') -eq 'download,view,view,edit') 'Unexpected GitHub mutation or missing notes refresh.'

@@ -19,7 +19,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not download all final release assets.' 
 $json = gh release view $Tag --repo $Repository --json body
 if ($LASTEXITCODE -ne 0) { throw 'Could not read release notes.' }
 $body = [string](($json | ConvertFrom-Json).body)
-$scan = & "$PSScriptRoot/submit-virustotal.ps1" -Tag $Tag -Directory $directory -ExistingNotes $body -ReportOnly:$ReportOnly
+$scan = & "$PSScriptRoot/submit-virustotal.ps1" -Tag $Tag -Directory $directory -ExistingNotes $body -ReportOnly:$ReportOnly -ReuseRecordedAnalyses
 $report = Get-Content -LiteralPath $scan.ReportPath -Raw
 if ($env:GITHUB_STEP_SUMMARY) { $report | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY }
 
