@@ -35,4 +35,17 @@ The tested recovery is to run the same MSI again to reinstall/repair, then retry
 
 Appearance preferences in `%LOCALAPPDATA%\Luma\settings.json` are kept. Open Windows Screen Saver Settings after installation to check selection, wait time and sign-in preference. Package installation changes selection, not activation, wait time or password requirements.
 
-Packages are unsigned. Antivirus results will be added for the exact final artifacts; no result is claimed for unscanned or different builds. Luma remains an independent MIT-licensed fork of Flux by Sander Melnikov.
+Packages are unsigned. Completed VirusTotal analyses for both exact final packages reported zero malicious and zero suspicious results on 2026-10-10. See the report links below; this is not a safety guarantee. Luma remains an independent MIT-licensed fork of Flux by Sander Melnikov.
+
+<!-- luma-virustotal:start -->
+## VirusTotal
+
+These release files are public samples. Reports are informational: false positives are possible, and zero detections do not guarantee safety. This does not replace code signing or remove SmartScreen warnings.
+
+Last checked: 2026-10-10 20:09 UTC.
+
+- [Luma-0.1.1-Setup-x64.msi](https://www.virustotal.com/gui/file/19afabb4206f17367ca5f71fe10e4c3663ee71a73108fc0951a81c436f9ec6ad/detection) — submitted; analysis ID: `NjUyZGJiZWI4ZDkyMGYzNmYwMDkwMTJlMjc1MzE1ZWI6MTc5MTY2Mjk1Mw==`.
+  Analysis completed: 0 malicious, 0 suspicious engine results. See report for context.
+- [Luma-0.1.1-windows-x64.zip](https://www.virustotal.com/gui/file/70110109409bd9bad52b6867fec7dd952d982c98887dffc4e318792ba7cd496b/detection) — submitted; analysis ID: `NzI3MTNlODIxMzRlY2U3MWIxMmE5MjUyODZhOWUyYWY6MTc5MTY2MzAxNw==`.
+  Analysis completed: 0 malicious, 0 suspicious engine results. See report for context.
+<!-- luma-virustotal:end -->

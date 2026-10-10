@@ -208,7 +208,7 @@ Both graphical and script-based per-user installers are available.
 
 ## Website
 
-The English landing page lives in [`site/`](site/README.md), with interactive palette illustrations and an optional clock preview. The GitHub Actions workflow builds and tests the Windows package, then publishes the site through GitHub Pages. Download buttons point to the latest public GitHub release, so a documentation update does not replace a released binary. See the [deployment instructions](site/README.md) for the custom domain `luma.ksmvc.ch`.
+The English landing page lives in [`site/`](site/README.md), with interactive palette illustrations and an optional clock preview. The GitHub Actions workflow builds and tests the Windows package, then publishes the site through GitHub Pages. Download buttons explicitly target the recommended v0.1.1 pre-release ZIP; the release notes explain the experimental MSI. A documentation update does not replace a released binary. See the [deployment instructions](site/README.md) for the custom domain `luma.ksmvc.ch`.
 
 ## Repository structure
 

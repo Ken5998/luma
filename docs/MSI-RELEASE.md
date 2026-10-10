@@ -179,7 +179,7 @@ No production installer or application code was changed by this investigation.
 [The upstream report](MSI-ROLLBACK-REPORT.md) was posted with explicit user
 authorization on 2026-10-10 as [a comment on WiX #8574](https://github.com/wixtoolset/issues/issues/8574#issuecomment-6101186682).
 The comment was read back and verified. No local user logs were uploaded.
-Publication remains blocked by the non-elevated rollback gate.
+Stable MSI promotion remains blocked by the non-elevated rollback gate; the authorized experimental pre-release does not waive it.
 ## Inno withdrawal and pre-release distribution
 
 Retire only the public v0.1.0 Setup EXE after a hash-verified local backup has
@@ -195,3 +195,26 @@ release notes: releases/latest continues to resolve the older stable release.
 Existing Inno users switching to ZIP remove their graphical installation first;
 appearance preferences survive. MSI users manage MSI files through Windows
 Installer rather than overwriting them with ZIP scripts.
+
+## Final v0.1.1 pre-release verification, 2026-10-10
+
+The [tag build](https://github.com/Ken5998/luma/actions/runs/38081976023)
+passed 52 default application tests, four native installer tests, deployment,
+uninstaller handoff and VirusTotal script tests. The [MSI integration run](https://github.com/Ken5998/luma/actions/runs/38081974342)
+passed activation, repair, upgrade, downgrade prevention, ZIP migration,
+transaction rollback and subsequent removal on an elevated disposable runner.
+This does not supersede the failed standard-user rollback evidence above.
+
+Final assets were downloaded from the draft and independently verified, including
+all ZIP payload checksums and exact embedded MSI payload equality.
+
+| Final asset | SHA-256 |
+| --- | --- |
+| Luma-0.1.1-Setup-x64.msi | 19afabb4206f17367ca5f71fe10e4c3663ee71a73108fc0951a81c436f9ec6ad |
+| Luma-0.1.1-windows-x64.zip | 70110109409bd9bad52b6867fec7dd952d982c98887dffc4e318792ba7cd496b |
+
+The explicitly authorized [VirusTotal scan](https://github.com/Ken5998/luma/actions/runs/38082587207)
+completed for both exact final assets: **0 malicious and 0 suspicious** results
+for each, checked on 2026-10-10. Reports and recorded analysis IDs are in the
+[v0.1.1 release notes](https://github.com/Ken5998/luma/releases/tag/v0.1.1).
+Packages remain unsigned; this does not guarantee safety or remove SmartScreen.
