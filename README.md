@@ -21,15 +21,25 @@ Luma is an independent MIT-licensed fork, currently under development.
 
 ## Install, update, or uninstall
 
-**[v0.1.1 is a pre-release](https://github.com/Ken5998/luma/releases/tag/v0.1.1). The ZIP is the recommended download; the MSI is experimental.**
+**[v0.1.1 is the latest stable release](https://github.com/Ken5998/luma/releases/tag/v0.1.1), with a native per-user MSI installer and an alternative ZIP package.**
 
+- **[Luma-0.1.1-Setup-x64.msi](https://github.com/Ken5998/luma/releases/download/v0.1.1/Luma-0.1.1-Setup-x64.msi)**: recommended graphical per-user installer with an Installed Apps entry. No administrator rights are needed.
 - **[Luma-0.1.1-windows-x64.zip](https://github.com/Ken5998/luma/releases/download/v0.1.1/Luma-0.1.1-windows-x64.zip)**: extract all files and run **Install.cmd**. No administrator rights are needed.
-- **[Luma-0.1.1-Setup-x64.msi](https://github.com/Ken5998/luma/releases/download/v0.1.1/Luma-0.1.1-Setup-x64.msi)**: experimental graphical per-user installer with an Installed Apps entry.
 - **[SHA256SUMS.txt](https://github.com/Ken5998/luma/releases/download/v0.1.1/SHA256SUMS.txt)**: checksums for these exact packages. Packages are unsigned; current antivirus reports are linked in the release notes.
 
 The old Inno Setup EXE is withdrawn from public downloads following antivirus detections. The historical findings remain in [the installer investigation](docs/INSTALLER-TRUST.md); they are not a confirmed vendor classification correction.
 
-### Recommended ZIP installation
+### MSI installation and updates
+
+Close Luma and Windows Screen Saver Settings, then run the MSI. After installation, open Windows Screen Saver Settings and check selection, wait time and sign-in preference.
+
+The MSI installs in `%LOCALAPPDATA%\Luma\MSI` and preserves appearance preferences. It supports managed default-directory ZIP/Inno migration, repair, upgrades and removal through Windows Installed Apps. Keep using MSI for updates/removal of an MSI installation; ZIP scripts do not manage MSI-owned files.
+
+**Known limitation:** if an MSI uninstall fails and rolls back, a subsequent uninstall can return success while leaving its files. The file is restored, but Windows Installer's registration is not fully recovered. This was reproduced without administrator privileges on two Windows 11 PCs and two Windows Server test environments, including a file-only package without any Luma DLL. Normal install/removal tests pass, but the rollback defect remains unresolved.
+
+In the tested recovery, running the same MSI again to reinstall/repair restores ownership; subsequent removal then succeeds. Keep the MSI if you try it. Do not manually delete Windows Installer registry entries. [Full evidence and upstream report](docs/MSI-RELEASE.md). The release includes this known limitation; promoting it to stable does not mean the rollback defect has been corrected.
+
+### Alternative ZIP installation
 
 Close Luma and Windows Screen Saver Settings. Extract the Windows ZIP, then double-click **Install.cmd**. It installs for the current user in `%LOCALAPPDATA%\Luma\Screensaver`, selects Luma, and opens Windows Screen Saver Settings. Check the wait time and sign-in preference, then click Apply.
 
@@ -38,14 +48,6 @@ Run Install.cmd from a newer extracted package to update an existing ZIP install
 If you installed v0.1.0 with the old graphical EXE, first remove that installation through Windows Installed Apps, then run Install.cmd from the new ZIP. Your appearance preferences at `%LOCALAPPDATA%\Luma\settings.json` are preserved. Close Luma and the Windows preview before switching package types.
 
 To uninstall a ZIP installation, run **Uninstall.cmd** from the package or installation folder. It restores the previous screensaver if that file still exists and Luma is still selected. A newer screensaver choice is left unchanged. The preferences file is preserved.
-
-### Experimental MSI
-
-The MSI installs in `%LOCALAPPDATA%\Luma\MSI` and preserves appearance preferences. It supports managed default-directory ZIP/Inno migration, repair, upgrades and removal through Windows Installed Apps. Keep using MSI for updates/removal of an MSI installation; ZIP scripts do not manage MSI-owned files.
-
-**Known limitation:** if an MSI uninstall fails and rolls back, a subsequent uninstall can return success while leaving its files. The file is restored, but Windows Installer's registration is not fully recovered. This was reproduced without administrator privileges on two Windows 11 PCs and two Windows Server test environments, including a file-only package without any Luma DLL. Normal install/removal tests pass, but the rollback defect remains unresolved.
-
-In the tested recovery, running the same MSI again to reinstall/repair restores ownership; subsequent removal then succeeds. Keep the MSI if you try it. Do not manually delete Windows Installer registry entries. [Full evidence and upstream report](docs/MSI-RELEASE.md). The MSI is offered for testing, not as the recommended stable installation.
 
 The scripts change only the current user's screensaver executable selection. They do not change activation, idle timeout, or password requirements. Windows applies the executable selection on its next screensaver launch ([Microsoft documentation](https://learn.microsoft.com/en-us/windows/win32/devnotes/scrnsave-exe)). Organization policies may override the selection.
 
@@ -71,10 +73,10 @@ The script produces `target\release\Luma.exe` and `target\release\Luma.scr`, and
 
 Produces `target\distribution\Luma-windows-x64.zip` and its SHA-256 checksum. The ZIP includes the screensaver, installer, uninstaller, instructions, license, and checksums for its files. It uses the freshly built executable, even if an older development `.scr` is locked by Windows.
 
-The experimental installer is a **per-user MSI**, reusing the native
-Rust activation and restoration implementation. It does not require administrator
-rights and retains appearance preferences. It is offered in v0.1.1 as an experimental pre-release; stable MSI promotion
-remains blocked by the documented non-elevated rollback defect.
+The installer is a **per-user MSI**, reusing the native Rust activation and
+restoration implementation. It does not require administrator rights and retains
+appearance preferences. v0.1.1 is published as stable with the documented
+non-elevated uninstall rollback limitation and tested recovery instructions.
 See [MSI release preparation](docs/MSI-RELEASE.md) for the evidence and checklist.
 
 For versioned MSI/ZIP assets, use PowerShell 7 and a .NET SDK for
@@ -208,7 +210,7 @@ Both graphical and script-based per-user installers are available.
 
 ## Website
 
-The English landing page lives in [`site/`](site/README.md), with interactive palette illustrations and an optional clock preview. The GitHub Actions workflow builds and tests the Windows package, then publishes the site through GitHub Pages. Download buttons explicitly target the recommended v0.1.1 pre-release ZIP; the release notes explain the experimental MSI. A documentation update does not replace a released binary. See the [deployment instructions](site/README.md) for the custom domain `luma.ksmvc.ch`.
+The English landing page lives in [`site/`](site/README.md), with interactive palette illustrations and an optional clock preview. The GitHub Actions workflow builds and tests the Windows package, then publishes the site through GitHub Pages. Download buttons open the latest stable GitHub release page, where users can choose MSI or ZIP and read the uninstall rollback note. A documentation update does not replace a released binary. See the [deployment instructions](site/README.md) for the custom domain `luma.ksmvc.ch`.
 
 ## Repository structure
 

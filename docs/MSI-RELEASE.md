@@ -1,9 +1,14 @@
 # Production MSI release preparation
 
-Luma v0.1.1 is an experimental pre-release: ZIP recommended, MSI for testing.
-On 2026-10-10 the maintainer explicitly chose pre-release publication with the
-known rollback limitation disclosed, and withdrawal of the old Inno EXE.
-This does not satisfy or waive the stable MSI acceptance gate.
+Luma v0.1.1 is published as a stable release with a known uninstall rollback
+limitation and tested recovery instructions. On 2026-10-12 the maintainer
+explicitly authorized promotion of the existing pre-release, prioritizing
+installation/migration and withdrawal of the old Inno EXE. The same verified
+MSI and ZIP are retained. This release decision does not turn the failing
+rollback test into a pass or claim the defect is fixed.
+
+The initial 2026-10-10 pre-release decision and investigation are historical
+evidence; the stable publication decision below supersedes that distribution policy.
 No automatic application updater is introduced by this installer work.
 
 ## Design
@@ -62,17 +67,14 @@ disposable Windows runner, explicitly recording whether it is elevated. Such a
 pass does not replace non-elevated acceptance. No review artifact is published
 as a release or submitted to VirusTotal automatically.
 
-The maintainer authorized a v0.1.1 pre-release with the known limitation clearly
-disclosed and ZIP recommended, rather than stable MSI promotion. Create the
-annotated `v0.1.1` tag on the reviewed source and push it. `Build draft Windows
-release` validates the tag/version, runs tests, packages and creates a **draft,
-pre-release only** for v0.1.1, refusing any existing release. Verify the final
-Actions hashes, scan those exact files with the authorized VirusTotal workflow,
-and publish while retaining the pre-release flag. No clean scan or completed
-stable MSI acceptance is implied by experimental publication. No tag or existing release is overwritten. Historical Inno files remain
-for migration/reproduction of old releases.
+The annotated v0.1.1 tag and final assets were created through the existing
+Build draft Windows release workflow. It checks versions, tests and hashes,
+creates a draft, and refuses to replace an existing release. Stable publication
+is a separate maintainer decision after review. The 2026-10-12 promotion uses
+the existing v0.1.1 tag and assets; neither binaries nor checksums are replaced.
+Release notes retain the exact final VirusTotal report links and known issue.
 
-## Required acceptance before stable MSI promotion
+## Regression checklist and unresolved acceptance items
 
 - [ ] Non-elevated install, repair, upgrade, downgrade rejection and uninstall.
 - [ ] Install rollback and uninstall rollback followed by successful removal.
@@ -123,7 +125,9 @@ The full [GitHub validation run](https://github.com/Ken5998/luma/actions/runs/38
 passed, including real v0.1.0 Inno migration and removal after uninstall rollback.
 Downloaded MSI logs explicitly record `MsiRunningElevated=1`, `Privileged=1` and
 `AdminUser=1`, so this pass does not establish the required non-elevated behavior.
-The no-administrator publication gate remains open.
+At that investigation stage the no-administrator publication gate remained open.
+The later stable release decision accepts the documented limitation; it does
+not establish successful non-elevated uninstall rollback.
 
 See [candidate evidence](msi-candidate.md) and
 `scripts/test-msi-rollback-probe.ps1`. Never weaken the failing assertion or
@@ -179,7 +183,9 @@ No production installer or application code was changed by this investigation.
 [The upstream report](MSI-ROLLBACK-REPORT.md) was posted with explicit user
 authorization on 2026-10-10 as [a comment on WiX #8574](https://github.com/wixtoolset/issues/issues/8574#issuecomment-6101186682).
 The comment was read back and verified. No local user logs were uploaded.
-Stable MSI promotion remains blocked by the non-elevated rollback gate; the authorized experimental pre-release does not waive it.
+At this stage the non-elevated rollback gate blocked stable promotion. The
+2026-10-12 maintainer decision below supersedes that publication hold while
+retaining the failed test and unresolved defect.
 ## Inno withdrawal and pre-release distribution
 
 Retire only the public v0.1.0 Setup EXE after a hash-verified local backup has
@@ -190,8 +196,9 @@ MSI validation no longer downloads it; the recorded real migration pass remains
 available, and a retained local installer may be supplied to the integration
 runner with -LegacySetupPath.
 
-The website explicitly targets the v0.1.1 ZIP and links the experimental MSI
-release notes: releases/latest continues to resolve the older stable release.
+The initial pre-release website targeted the v0.1.1 ZIP explicitly. After stable
+promotion, both download buttons open releases/latest so users can choose MSI
+or ZIP and read the known limitation before downloading.
 Existing Inno users switching to ZIP remove their graphical installation first;
 appearance preferences survive. MSI users manage MSI files through Windows
 Installer rather than overwriting them with ZIP scripts.
@@ -218,3 +225,20 @@ completed for both exact final assets: **0 malicious and 0 suspicious** results
 for each, checked on 2026-10-10. Reports and recorded analysis IDs are in the
 [v0.1.1 release notes](https://github.com/Ken5998/luma/releases/tag/v0.1.1).
 Packages remain unsigned; this does not guarantee safety or remove SmartScreen.
+
+## Stable promotion, 2026-10-12
+
+The maintainer explicitly authorized publishing v0.1.1 as stable with the known
+uninstall rollback defect disclosed. Normal installation/migration results and
+the new packages' antivirus reports were the reasons for this release decision.
+The defect and regression assertions remain unchanged. The non-elevated local
+install, repair, install rollback, upgrade, ZIP migration and failed-migration
+rollback passes above remain distinct from the failing uninstall rollback test;
+the real Inno migration acceptance evidence is from elevated CI.
+
+Promotion keeps the original tag, MSI, ZIP, SHA256SUMS.txt and their verified
+hashes. Update the release's title/notes and mark it stable/latest; do not rebuild
+or replace its assets. README and website disclose the uninstall limitation:
+a failed uninstall rollback can leave files after the next removal. Run the same
+MSI to reinstall/repair, then retry removal, as verified by the recovery tests.
+This is acceptance of a known issue, not a correction of it.

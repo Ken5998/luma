@@ -76,10 +76,4 @@ jobs:
           cd release-packages
           sha256sum --strict --check SHA256SUMS.txt
           cd ..
-          release_mode=()
-          release_title="Luma v$version"
-          if [[ "$version" == "0.1.1" ]]; then
-            release_mode+=(--prerelease --latest=false)
-            release_title+=" — ZIP recommended, experimental MSI"
-          fi
-          gh release create "$GITHUB_REF_NAME" --verify-tag --draft "${release_mode[@]}" --title "$release_title" --notes-file "docs/RELEASE-v$version.md" "release-packages/Luma-$version-Setup-x64.msi" "release-packages/Luma-$version-windows-x64.zip" release-packages/SHA256SUMS.txt
+          gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Luma v$version" --notes-file "docs/RELEASE-v$version.md" "release-packages/Luma-$version-Setup-x64.msi" "release-packages/Luma-$version-windows-x64.zip" release-packages/SHA256SUMS.txt

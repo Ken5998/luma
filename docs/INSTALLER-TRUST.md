@@ -5,8 +5,10 @@
 The old v0.1.0 Inno Setup EXE is withdrawn from public downloads following the
 recorded antivirus detections. Its source, hashes and historical investigation
 remain available. This withdrawal does not establish a vendor-confirmed false
-positive or claim that the MSI fixes every classification. v0.1.1 is a pre-release:
-ZIP recommended, MSI experimental with its [rollback limitation](MSI-RELEASE.md).
+positive or claim that the MSI fixes every classification. v0.1.1 is the stable release, promoted on 2026-10-12 with the
+known [uninstall rollback limitation and recovery](MSI-RELEASE.md) disclosed.
+Its unchanged MSI and ZIP reported zero malicious and zero suspicious results
+on 2026-10-10; this is not a safety guarantee or code signing.
 Reports for the final v0.1.1 artifacts are published in that release's notes.
 
 ## Baseline, 2026-09-16
