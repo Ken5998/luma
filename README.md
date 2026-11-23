@@ -91,9 +91,16 @@ This creates `Luma-<version>-Setup-x64.msi`, the ZIP and `SHA256SUMS.txt` under
 Inno authoring remains available for old-release migration tests. Luma starts its
 own release numbering at v0.1.0, independent of the inherited Flux version.
 
+To release, merge a change to `main` that bumps the workspace version in
+`Cargo.toml` (and `Cargo.lock`) and adds `docs/RELEASE-v<version>.md`. The
+release workflow then runs the tests, builds and verifies the packages, publishes
+`v<version>` with those notes, and starts the VirusTotal scan. Pushing a `v*` tag
+by hand instead builds a draft for manual review.
+
 The [VirusTotal workflow](docs/VIRUSTOTAL.md) scans final release assets using the
 `VT_API_KEY` repository secret and adds report links to the release notes. It runs
-on release publication or manually for an existing release or draft. Reports do
+after each automatic release, on manual release publication, or on demand for an
+existing release or draft. Reports do
 not replace code signing or remove Windows SmartScreen warnings.
 
 The [installer detection investigation](docs/INSTALLER-TRUST.md) records the

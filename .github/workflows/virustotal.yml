@@ -2,6 +2,14 @@ name: Scan release with VirusTotal
 on:
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      report_only:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       tag:

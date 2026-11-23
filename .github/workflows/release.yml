@@ -1,14 +1,57 @@
-name: Build draft Windows release
+name: Build Windows release
+# A version bump merged into main publishes that version automatically:
+# tests, MSI/ZIP build, release with the new tag, then the VirusTotal scan.
+# Pushing a v* tag by hand still builds a draft for manual review.
 on:
   push:
+    branches: [main]
+    paths: [Cargo.toml]
     tags: ['v*']
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      mode: ${{ steps.plan.outputs.mode }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Decide whether this commit releases a new version
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "luma-desktop") | .version')
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          tag="v$version"
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            [[ "$GITHUB_REF_NAME" == "$tag" ]] || { echo "Tag $GITHUB_REF_NAME must match the Cargo workspace version $version." >&2; exit 1; }
+            mode=draft
+          elif gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "$tag already exists; nothing to release."
+            mode=skip
+          else
+            mode=publish
+          fi
+          if [[ "$mode" != skip && ! -f "docs/RELEASE-$tag.md" ]]; then
+            echo "docs/RELEASE-$tag.md is required for the release notes." >&2
+            exit 1
+          fi
+          echo "Release plan: $tag ($mode)" >> "$GITHUB_STEP_SUMMARY"
+          { echo "version=$version"; echo "tag=$tag"; echo "mode=$mode"; } >> "$GITHUB_OUTPUT"
   package:
+    needs: prepare
+    if: needs.prepare.outputs.mode != 'skip'
     runs-on: windows-2025
     timeout-minutes: 40
     defaults:
@@ -23,13 +66,9 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
-      - name: Validate tag and test
+      - name: Test
         run: |
-          $metadata = cargo metadata --locked --no-deps --format-version 1 | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) { throw 'Cargo metadata failed.' }
-          $version = ($metadata.packages | Where-Object name -eq 'luma-desktop').version
-          if ($env:GITHUB_REF_NAME -cne "v$version") { throw 'Tag must match the Cargo workspace version.' }
-          "LUMA_VERSION=$version" | Add-Content $env:GITHUB_ENV
+          "LUMA_VERSION=${{ needs.prepare.outputs.version }}" | Add-Content $env:GITHUB_ENV
           cargo test --locked --release -p luma -p luma-desktop
           if ($LASTEXITCODE -ne 0) { throw 'Application tests failed.' }
           cargo test --locked --manifest-path packaging/windows/msi/Cargo.toml
@@ -47,8 +86,8 @@ jobs:
             target/releases/${{ env.LUMA_VERSION }}/Luma-${{ env.LUMA_VERSION }}-windows-x64.zip
             target/releases/${{ env.LUMA_VERSION }}/SHA256SUMS.txt
           if-no-files-found: error
-  draft:
-    needs: package
+  release:
+    needs: [prepare, package]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -60,20 +99,38 @@ jobs:
         with:
           name: release-packages
           path: release-packages
-      - name: Create draft only; never replace an existing release
+      - name: Create the release; never replace an existing one
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          MODE: ${{ needs.prepare.outputs.mode }}
         shell: bash
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[].tag_name')
-          if echo "$existing" | grep -Fxq "$GITHUB_REF_NAME"; then
+          if echo "$existing" | grep -Fxq "$TAG"; then
             echo 'Release already exists; refusing to replace assets.' >&2
             exit 1
           fi
           cd release-packages
           sha256sum --strict --check SHA256SUMS.txt
           cd ..
-          gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Luma v$version" --notes-file "docs/RELEASE-v$version.md" "release-packages/Luma-$version-Setup-x64.msi" "release-packages/Luma-$version-windows-x64.zip" release-packages/SHA256SUMS.txt
+          assets=("release-packages/Luma-$VERSION-Setup-x64.msi" "release-packages/Luma-$VERSION-windows-x64.zip" release-packages/SHA256SUMS.txt)
+          if [[ "$MODE" == draft ]]; then
+            gh release create "$TAG" --verify-tag --draft --title "Luma v$VERSION" --notes-file "docs/RELEASE-$TAG.md" "${assets[@]}"
+          else
+            # Creates the tag on the tested commit and publishes immediately.
+            gh release create "$TAG" --target "$GITHUB_SHA" --latest --title "Luma v$VERSION" --notes-file "docs/RELEASE-$TAG.md" "${assets[@]}"
+          fi
+  scan:
+    # Releases published with the workflow token do not trigger other workflows,
+    # so the VirusTotal scan is called directly.
+    needs: [prepare, release]
+    if: needs.prepare.outputs.mode == 'publish'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/virustotal.yml
+    with:
+      tag: ${{ needs.prepare.outputs.tag }}
+    secrets: inherit
