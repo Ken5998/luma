@@ -183,6 +183,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 // One event loop owns every display, so any exit request closes the entire saver.
+/// Cover `monitor` exactly with the saver window.
+///
+/// On Windows winit sizes a new window while it is still on the primary display
+/// and only then moves it to the requested position. When the target display has
+/// a different DPI scale, the move triggers WM_DPICHANGED and winit rescales the
+/// window to keep its logical size: a 2560x1440 display at 100% next to a 150%
+/// primary ends up with a 1707x960 window in its top-left corner. Re-applying
+/// the bounds once the window lives on its own display undoes that.
+fn fit_to_monitor(window: &Window, monitor: &MonitorHandle) {
+    let position = monitor.position();
+    let size = monitor.size();
+    if window.outer_position().ok() != Some(position) {
+        window.set_outer_position(position);
+    }
+    if window.inner_size() != size {
+        log::info!(
+            "Refitting saver window from {:?} to monitor size {:?}",
+            window.inner_size(),
+            size
+        );
+        let _ = window.request_inner_size(size);
+    }
+}
+
 struct MultiMonitorApp {
     mode: Mode,
     displays: Vec<LumaApp>,
@@ -357,6 +381,9 @@ impl ApplicationHandler for LumaApp {
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
         if self.mode == Mode::Saver {
             window.set_cursor_visible(false);
+            if let Some(monitor) = &self.monitor {
+                fit_to_monitor(&window, monitor);
+            }
         }
 
         let wgpu_instance = wgpu::Instance::default();
@@ -565,7 +592,15 @@ impl ApplicationHandler for LumaApp {
                 gpu.scale_factor = window.scale_factor();
                 window.request_redraw();
             }
-            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+            WindowEvent::ScaleFactorChanged {
+                scale_factor,
+                mut inner_size_writer,
+            } => {
+                // winit preserves the logical size across DPI changes, which would
+                // shrink a saver window that moved to a lower-DPI display.
+                if let (Mode::Saver, Some(monitor)) = (self.mode, &self.monitor) {
+                    let _ = inner_size_writer.request_inner_size(monitor.size());
+                }
                 gpu.resize_pending = true;
                 gpu.scale_factor = scale_factor;
                 window.request_redraw();
