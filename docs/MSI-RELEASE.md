@@ -1,6 +1,7 @@
 # Production MSI release preparation
 
-Luma v0.1.2 adds the Windows Installed Apps icon to the stable MSI distribution.
+Luma v0.1.3 is the current stable MSI distribution; it fixes screensaver sizing on
+mixed-DPI multi-monitor setups. v0.1.2 added the Windows Installed Apps icon.
 It retains the known uninstall rollback limitation and tested recovery instructions.
 The maintainer first authorized stable distribution with that limitation for
 v0.1.1 on 2026-10-12, prioritizing installation/migration and withdrawal of the
@@ -289,3 +290,30 @@ The verified draft was published as [v0.1.2](https://github.com/Ken5998/luma/rel
 on 2026-10-20, with the same scanned assets and checksums. README and website
 references were advanced to v0.1.2 after publication. The known non-elevated
 uninstall rollback limitation remains documented in the release notes.
+
+## Luma v0.1.3 multi-monitor scaling release, 2026-11-23
+
+The release fixes saver windows on displays whose Windows scale differs from the
+primary display. winit sized each window on the primary display before moving it,
+and the resulting DPI change shrank it to the same logical size (for example a
+1707x960 window on a 2560x1440 display at 100% beside a 150% 4K primary). Each
+saver window is now refitted to its monitor's physical bounds after creation and
+on scale changes ([#2](https://github.com/Ken5998/luma/pull/2)).
+
+- Release tag: `v0.1.3`, source commit `2aef7b0`.
+- Local application tests: 52 passed, with GPU/interactive-only tests skipped.
+- [Draft packaging workflow](https://github.com/Ken5998/luma/actions/runs/45264231714): passed,
+  including application, native installer, deployment, uninstall handoff and
+  VirusTotal script tests.
+- Installer, packaging, animation, palettes and clock behavior are unchanged.
+
+| Final release file | SHA-256 |
+| --- | --- |
+| Luma-0.1.3-Setup-x64.msi | 47a9d02395bc5ac23847c79f884a42860b4be43685c3b457d49bdd46d0167078 |
+| Luma-0.1.3-windows-x64.zip | 39319b42a71fd8e66b169491088ec18d7c5ecb976cab031b56750d943bb31f15 |
+
+VirusTotal reports for both files are linked in the
+[v0.1.3 release notes](https://github.com/Ken5998/luma/releases/tag/v0.1.3) once the
+publication scan completes. README and website references were advanced to
+v0.1.3 after publication. The known non-elevated uninstall rollback limitation
+remains documented in the release notes.
